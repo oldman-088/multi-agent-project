@@ -9,7 +9,10 @@
     "languageSelect": "Select language"
   },
   "nav": {
-    "home": "Home"
+    "home": "Home",
+    "agents": "Agents",
+    "chat": "Chat",
+    "connections": "Connections"
   },
   "home": {
     "heading": "Welcome to NEXUS",
@@ -21,12 +24,139 @@
     "ltr": "Left to right (LTR)",
     "openPaletteHint": "Press {shortcut} to open the command palette"
   },
+  "states": {
+    "loading": "Loading…",
+    "errorTitle": "Something went wrong",
+    "retry": "Retry"
+  },
+  "agents": {
+    "heading": "Agents",
+    "create": "New agent",
+    "createTitle": "Create agent",
+    "createDescription": "Define the agent's role, goal and instructions. Version 1 is saved on creation.",
+    "editTitle": "Edit agent",
+    "editDescription": "Saving appends a new immutable version; existing versions are never modified.",
+    "emptyTitle": "No agents yet",
+    "emptyDescription": "Create your first agent to start running tasks.",
+    "roleUnset": "no role",
+    "versionLabel": "v{version}",
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "archived": "Archived"
+    },
+    "actions": {
+      "edit": "Edit",
+      "enable": "Enable",
+      "disable": "Disable",
+      "archive": "Archive"
+    },
+    "form": {
+      "name": "Name",
+      "nameRequired": "Name is required.",
+      "description": "Description",
+      "role": "Role",
+      "goal": "Goal",
+      "instructions": "Instructions",
+      "runtime": "Runtime",
+      "runtimeNative": "Native",
+      "runtimeSoftwareTeam": "Software team",
+      "tools": "Tools",
+      "toolsPlaceholder": "calc.evaluate, time.now",
+      "toolsHint": "Comma-separated tool slugs from the Tool Gateway allow-list.",
+      "changeNote": "Change note",
+      "cancel": "Cancel",
+      "saveCreate": "Create agent",
+      "saveEdit": "Save new version"
+    }
+  },
+  "chat": {
+    "heading": "Chat",
+    "newChat": "New chat",
+    "agentLabel": "Agent",
+    "noAgents": "No agents available",
+    "conversationsNav": "Conversations",
+    "untitled": "Untitled",
+    "noConversations": "No conversations yet",
+    "emptyThread": "Send a message to start the conversation.",
+    "composerLabel": "Message",
+    "composerPlaceholder": "Send a message…",
+    "send": "Send",
+    "streaming": "Assistant is typing…",
+    "streamError": "The live stream was interrupted.",
+    "roles": {
+      "user": "You",
+      "assistant": "Assistant"
+    },
+    "tools": {
+      "running": "Running",
+      "awaiting": "Awaiting approval",
+      "completed": "Completed",
+      "failed": "Failed",
+      "duration": "{ms} ms",
+      "resultReady": "Tool {tool} finished.",
+      "resultFailed": "Tool {tool} failed."
+    },
+    "approvals": {
+      "groupLabel": "Tool approval",
+      "requested": "The agent requests approval to run {tool}.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    }
+  },
+  "connections": {
+    "heading": "Connections",
+    "pairDevice": "Pair bridge device",
+    "devices": {
+      "heading": "Bridge devices",
+      "emptyTitle": "No paired devices",
+      "emptyDescription": "Pair a browser device through the local bridge to let agents use it.",
+      "userscript": "userscript {version}",
+      "ready": "READY",
+      "revoked": "Revoked",
+      "lastSeen": "last seen {time}",
+      "revoke": "Revoke"
+    },
+    "connections": {
+      "heading": "Saved connections",
+      "empty": "No saved connections yet."
+    },
+    "sessions": {
+      "heading": "Browser sessions",
+      "empty": "No browser sessions reported by the bridge yet."
+    },
+    "status": {
+      "disabled": "Disabled",
+      "enabled": "Enabled",
+      "error": "Error"
+    },
+    "pair": {
+      "title": "Pair a bridge device",
+      "description": "The local bridge issues a one-time pairing credential. It is shown once — only its hash is stored.",
+      "label": "Device label",
+      "labelRequired": "Device label is required.",
+      "userscriptVersion": "Userscript version",
+      "generate": "Generate pairing code",
+      "cancel": "Cancel",
+      "codeTitle": "One-time pairing credential",
+      "codeOnce": "Copy it into your userscript now — it expires in {seconds} seconds and cannot be shown again.",
+      "confirmCode": "Confirm pairing code",
+      "confirmHint": "Paste the pairing code to confirm you saved it. This enables the save step.",
+      "provider": "Provider for the saved connection",
+      "save": "Save connection"
+    }
+  },
   "palette": {
     "open": "Open command palette",
     "placeholder": "Type a command to search…",
     "empty": "No matching commands",
     "commands": {
       "goHome": "Go to home",
+      "goAgents": "Go to agents",
+      "goChat": "Go to chat",
+      "goConnections": "Go to connections",
       "toggleTheme": "Toggle theme",
       "setLanguageAr": "Switch language to Arabic",
       "setLanguageEn": "Switch language to English",

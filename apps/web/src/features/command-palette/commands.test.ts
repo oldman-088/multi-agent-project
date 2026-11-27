@@ -6,8 +6,8 @@ const navigate = vi.fn();
 const setLanguage = vi.fn();
 const toggleTheme = vi.fn();
 
-describe('buildCommands (SPEC 8.3-J structural palette)', () => {
-  it('returns 4 commands: go home, toggle theme, and the two non-current languages', () => {
+describe('buildCommands (SPEC 8.3-J palette)', () => {
+  it('returns 7 commands: 4 navigation targets, theme toggle and the two non-current languages', () => {
     const commands = buildCommands({
       t,
       navigate,
@@ -18,6 +18,9 @@ describe('buildCommands (SPEC 8.3-J structural palette)', () => {
 
     expect(commands.map((command) => command.id)).toEqual([
       'go-home',
+      'go-agents',
+      'go-chat',
+      'go-connections',
       'toggle-theme',
       'set-language-en',
       'set-language-fa',
@@ -34,9 +37,12 @@ describe('buildCommands (SPEC 8.3-J structural palette)', () => {
     });
 
     expect(commands[0]?.label).toBe('palette.commands.goHome');
-    expect(commands[1]?.label).toBe('palette.commands.toggleTheme');
-    expect(commands[2]?.label).toBe('palette.commands.setLanguageEn');
-    expect(commands[3]?.label).toBe('palette.commands.setLanguageFa');
+    expect(commands[1]?.label).toBe('palette.commands.goAgents');
+    expect(commands[2]?.label).toBe('palette.commands.goChat');
+    expect(commands[3]?.label).toBe('palette.commands.goConnections');
+    expect(commands[4]?.label).toBe('palette.commands.toggleTheme');
+    expect(commands[5]?.label).toBe('palette.commands.setLanguageEn');
+    expect(commands[6]?.label).toBe('palette.commands.setLanguageFa');
   });
 
   it('every command actually executes', () => {
@@ -53,6 +59,9 @@ describe('buildCommands (SPEC 8.3-J structural palette)', () => {
     }
 
     expect(navigate).toHaveBeenCalledWith('/');
+    expect(navigate).toHaveBeenCalledWith('/agents');
+    expect(navigate).toHaveBeenCalledWith('/chat');
+    expect(navigate).toHaveBeenCalledWith('/connections');
     expect(toggleTheme).toHaveBeenCalledTimes(1);
     expect(setLanguage).toHaveBeenCalledWith('en');
     expect(setLanguage).toHaveBeenCalledWith('fa');
@@ -70,6 +79,9 @@ describe('buildCommands (SPEC 8.3-J structural palette)', () => {
 
     expect(commands.map((command) => command.id)).toEqual([
       'go-home',
+      'go-agents',
+      'go-chat',
+      'go-connections',
       'toggle-theme',
       'set-language-ar',
       'set-language-en',

@@ -9,7 +9,10 @@
     "languageSelect": "اختيار اللغة"
   },
   "nav": {
-    "home": "الصفحة الرئيسية"
+    "home": "الصفحة الرئيسية",
+    "agents": "الوكلاء",
+    "chat": "الدردشة",
+    "connections": "الاتصالات"
   },
   "home": {
     "heading": "مرحبًا بك في NEXUS",
@@ -21,12 +24,139 @@
     "ltr": "من اليسار إلى اليمين (LTR)",
     "openPaletteHint": "اضغط {shortcut} لفتح لوحة الأوامر"
   },
+  "states": {
+    "loading": "جارٍ التحميل…",
+    "errorTitle": "حدث خطأ ما",
+    "retry": "إعادة المحاولة"
+  },
+  "agents": {
+    "heading": "الوكلاء",
+    "create": "وكيل جديد",
+    "createTitle": "إنشاء وكيل",
+    "createDescription": "حدّد دور الوكيل وهدفه وتعليماته. يُحفظ الإصدار 1 عند الإنشاء.",
+    "editTitle": "تعديل الوكيل",
+    "editDescription": "الحفظ يضيف إصدارًا جديدًا غير قابل للتعديل؛ لا تُعدَّل الإصدارات الموجودة أبدًا.",
+    "emptyTitle": "لا يوجد وكلاء بعد",
+    "emptyDescription": "أنشئ أول وكيل لبدء تنفيذ المهام.",
+    "roleUnset": "بدون دور",
+    "versionLabel": "الإصدار {version}",
+    "status": {
+      "enabled": "مفعّل",
+      "disabled": "معطّل",
+      "archived": "مؤرشف"
+    },
+    "actions": {
+      "edit": "تعديل",
+      "enable": "تفعيل",
+      "disable": "تعطيل",
+      "archive": "أرشفة"
+    },
+    "form": {
+      "name": "الاسم",
+      "nameRequired": "الاسم مطلوب.",
+      "description": "الوصف",
+      "role": "الدور",
+      "goal": "الهدف",
+      "instructions": "التعليمات",
+      "runtime": "زمن التشغيل",
+      "runtimeNative": "أصلي",
+      "runtimeSoftwareTeam": "فريق برمجي",
+      "tools": "الأدوات",
+      "toolsPlaceholder": "calc.evaluate, time.now",
+      "toolsHint": "معرّفات أدوات مفصولة بفواصل من قائمة بوابة الأدوات المسموح بها.",
+      "changeNote": "ملاحظة التغيير",
+      "cancel": "إلغاء",
+      "saveCreate": "إنشاء الوكيل",
+      "saveEdit": "حفظ إصدار جديد"
+    }
+  },
+  "chat": {
+    "heading": "الدردشة",
+    "newChat": "محادثة جديدة",
+    "agentLabel": "الوكيل",
+    "noAgents": "لا يوجد وكلاء متاحون",
+    "conversationsNav": "المحادثات",
+    "untitled": "بدون عنوان",
+    "noConversations": "لا توجد محادثات بعد",
+    "emptyThread": "أرسل رسالة لبدء المحادثة.",
+    "composerLabel": "الرسالة",
+    "composerPlaceholder": "أرسل رسالة…",
+    "send": "إرسال",
+    "streaming": "المساعد يكتب…",
+    "streamError": "انقطعت البث المباشر.",
+    "roles": {
+      "user": "أنت",
+      "assistant": "المساعد"
+    },
+    "tools": {
+      "running": "قيد التنفيذ",
+      "awaiting": "بانتظار الموافقة",
+      "completed": "مكتمل",
+      "failed": "فشل",
+      "duration": "{ms} مللي ثانية",
+      "resultReady": "اكتملت الأداة {tool}.",
+      "resultFailed": "فشلت الأداة {tool}."
+    },
+    "approvals": {
+      "groupLabel": "موافقة الأداة",
+      "requested": "يطلب الوكيل الموافقة على تشغيل {tool}.",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "approved": "تمت الموافقة",
+      "rejected": "مرفوض"
+    }
+  },
+  "connections": {
+    "heading": "الاتصالات",
+    "pairDevice": "إقران جهاز الجسر",
+    "devices": {
+      "heading": "أجهزة الجسر",
+      "emptyTitle": "لا توجد أجهزة مقترنة",
+      "emptyDescription": "أقرن جهاز متصفح عبر الجسر المحلي للسماح للوكلاء باستخدامه.",
+      "userscript": "سكريبت المستخدم {version}",
+      "ready": "متصل",
+      "revoked": "ملغى",
+      "lastSeen": "آخر ظهور {time}",
+      "revoke": "إلغاء"
+    },
+    "connections": {
+      "heading": "الاتصالات المحفوظة",
+      "empty": "لا توجد اتصالات محفوظة بعد."
+    },
+    "sessions": {
+      "heading": "جلسات المتصفح",
+      "empty": "لم يبلغ الجسر عن أي جلسات متصفح بعد."
+    },
+    "status": {
+      "disabled": "معطّل",
+      "enabled": "مفعّل",
+      "error": "خطأ"
+    },
+    "pair": {
+      "title": "إقران جهاز جسر",
+      "description": "يصدر الجسر المحلي بيانات اعتماد إقران لمرة واحدة. تُعرض مرة واحدة فقط — يُخزَّن بصمتها (hash) فقط.",
+      "label": "اسم الجهاز",
+      "labelRequired": "اسم الجهاز مطلوب.",
+      "userscriptVersion": "إصدار سكريبت المستخدم",
+      "generate": "توليد رمز الإقران",
+      "cancel": "إلغاء",
+      "codeTitle": "بيانات اعتماد الإقران لمرة واحدة",
+      "codeOnce": "انسخها إلى سكريبت المستخدم الآن — تنتهي خلال {seconds} ثانية ولا يمكن عرضها مجددًا.",
+      "confirmCode": "تأكيد رمز الإقران",
+      "confirmHint": "الصق رمز الإقران لتأكيده. هذا يفعّل زر الحفظ.",
+      "provider": "مزود الاتصال المحفوظ",
+      "save": "حفظ الاتصال"
+    }
+  },
   "palette": {
     "open": "فتح لوحة الأوامر",
     "placeholder": "اكتب أمرًا للبحث…",
     "empty": "لا توجد أوامر مطابقة",
     "commands": {
       "goHome": "الانتقال إلى الصفحة الرئيسية",
+      "goAgents": "الانتقال إلى الوكلاء",
+      "goChat": "الانتقال إلى الدردشة",
+      "goConnections": "الانتقال إلى الاتصالات",
       "toggleTheme": "تبديل المظهر",
       "setLanguageAr": "تغيير اللغة إلى العربية",
       "setLanguageEn": "تغيير اللغة إلى الإنجليزية",

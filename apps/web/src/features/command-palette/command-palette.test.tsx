@@ -22,17 +22,20 @@ describe('command palette (SPEC 8.3-J)', () => {
     expect(combobox).toHaveAttribute('aria-controls', 'command-palette-listbox');
   });
 
-  it('lists exactly the 4 structural commands in Arabic by default', async () => {
+  it('lists the 7 commands in Arabic by default', async () => {
     const user = userEvent.setup();
     render(<App />);
 
     await openPalette(user);
     const options = screen.getAllByRole('option');
-    expect(options).toHaveLength(4);
+    expect(options).toHaveLength(7);
     expect(options[0]).toHaveTextContent('الانتقال إلى الصفحة الرئيسية');
-    expect(options[1]).toHaveTextContent('تبديل المظهر');
-    expect(options[2]).toHaveTextContent('تغيير اللغة إلى الإنجليزية');
-    expect(options[3]).toHaveTextContent('تغيير اللغة إلى الفارسية');
+    expect(options[1]).toHaveTextContent('الانتقال إلى الوكلاء');
+    expect(options[2]).toHaveTextContent('الانتقال إلى الدردشة');
+    expect(options[3]).toHaveTextContent('الانتقال إلى الاتصالات');
+    expect(options[4]).toHaveTextContent('تبديل المظهر');
+    expect(options[5]).toHaveTextContent('تغيير اللغة إلى الإنجليزية');
+    expect(options[6]).toHaveTextContent('تغيير اللغة إلى الفارسية');
     // The current language is never offered as a switch target.
     expect(screen.queryByRole('option', { name: /العربية/ })).not.toBeInTheDocument();
   });
@@ -60,7 +63,7 @@ describe('command palette (SPEC 8.3-J)', () => {
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe('dark'));
 
     await openPalette(user);
-    await user.keyboard('{ArrowDown}'); // active = toggle-theme
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}'); // active = toggle-theme
     await user.keyboard('{Enter}');
 
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe('light'));
@@ -73,7 +76,7 @@ describe('command palette (SPEC 8.3-J)', () => {
     render(<App />);
 
     await openPalette(user);
-    await user.keyboard('en'); // keyword of set-language-en
+    await user.keyboard('الإنجليزية'); // unique label fragment of set-language-en
     expect(screen.getAllByRole('option')).toHaveLength(1);
     expect(screen.getByRole('option')).toHaveTextContent('تغيير اللغة إلى الإنجليزية');
     await user.keyboard('{Enter}');
