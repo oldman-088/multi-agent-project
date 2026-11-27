@@ -1,0 +1,31 @@
+# Dockerfile.bridge — Local Browser Bridge (docs/SPEC.md §3.2, §10).
+#
+# Build context is the repo root; the code comes from the bridge slice
+# (open PR #4): integrations/browser-bridge/src/ uses flat imports
+# (`from pairing import ...`), so the image runs it with that directory as
+# WORKDIR — `python app.py` puts it on sys.path.
+#
+# The slice ships no requirements.txt yet, so dependencies are installed
+# inline with the same floors as the root pyproject.toml; switch to
+# `pip install -r` when the bridge slice adds a manifest (see docs/DEPLOYMENT.md).
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir "fastapi>=0.110" "uvicorn[standard]>=0.27" "pydantic>=2.6"
+
+COPY integrations/browser-bridge/src/ ./
+
+# Non-root runtime user. The bridge keeps all state in memory (pairing store,
+# sessions) and writes nothing to disk.
+RUN useradd --create-home --uid 10002 nexus-bridge
+USER nexus-bridge
+
+# main() binds 127.0.0.1 only (BRIDGE_HOST is fixed in code, SPEC §3.2); the
+# compose service runs with network_mode: host so that is the host loopback.
+EXPOSE 8790
+
+CMD ["python", "app.py"]

@@ -1,0 +1,33 @@
+# Dockerfile.backend — NEXUS API + Alembic migrations (docs/SPEC.md §10).
+#
+# Build context is the repo root: pyproject.toml and backend/ come from the
+# backend slice (open PR #2). Dependencies are installed non-editable; the
+# source tree is imported via PYTHONPATH=/app because pyproject.toml declares
+# `packages = ["backend"]`, which a non-editable install only ships as the
+# top-level module.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+WORKDIR /app
+
+COPY pyproject.toml ./
+COPY backend/ ./backend/
+
+RUN pip install --no-cache-dir .
+
+# Non-root runtime user; /data is the backend-data volume mount point and is
+# initialized from the image (owned by this user) on first start.
+RUN useradd --create-home --uid 10001 nexus \
+    && mkdir -p /data \
+    && chown nexus:nexus /data
+
+USER nexus
+
+EXPOSE 8000
+
+# Migrations are idempotent, so every start converges the schema (SPEC §9).
+# exec so uvicorn receives SIGTERM from `docker compose stop`.
+CMD ["sh", "-c", "alembic -c backend/alembic.ini upgrade head && exec python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"]

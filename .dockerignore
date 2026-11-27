@@ -1,0 +1,46 @@
+# .dockerignore — keep secrets, junk and host artifacts out of build contexts.
+# All three services build with context = repo root (see docker-compose.yml).
+
+# Secrets and local env (never bake into an image)
+.env
+.env.*
+!.env.example
+
+# VCS / CI
+.git
+.github
+
+# Node
+node_modules
+npm-debug.log*
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+
+# Python caches and local environments
+__pycache__
+*.py[cod]
+.venv
+venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Local databases (compose mounts a named volume instead)
+*.db
+*.db-wal
+*.db-shm
+
+# Test / tooling artifacts
+coverage
+htmlcov
+test-results
+playwright-report
+artifacts
+
+# Editor / OS noise
+.idea
+.vscode
+.DS_Store

@@ -1,0 +1,100 @@
+# docker-compose.yml — NEXUS AGENT OS local stack (docs/SPEC.md §10).
+#
+# Runs the three local-first services:
+#   backend         FastAPI API + Alembic migrations   127.0.0.1:${NEXUS_BACKEND_PORT:-8000}
+#   frontend        SPA + /api,/ws reverse proxy       127.0.0.1:${NEXUS_FRONTEND_PORT:-3000}
+#   browser-bridge  loopback-only userscript bridge    host network (127.0.0.1:${NEXUS_BRIDGE_PORT:-8790})
+#
+# Published ports bind 127.0.0.1 only — nothing is exposed on LAN interfaces.
+# Every ${VAR} below is documented in .env.example with a safe default, so
+# `docker compose up` also works with no .env at all. See docs/DEPLOYMENT.md.
+name: nexus-agent-os
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    ports:
+      - "127.0.0.1:${NEXUS_BACKEND_PORT:-8000}:8000"
+    environment:
+      NEXUS_ENV: "${NEXUS_ENV:-development}"
+      NEXUS_LOG_LEVEL: "${NEXUS_LOG_LEVEL:-INFO}"
+      # Pinned to the named volume: .env's NEXUS_DATABASE_URL applies to host
+      # runs (docs/DEVELOPMENT.md); compose always uses backend-data:/data.
+      # To point the stack at an external DB, override in docker-compose.override.yml.
+      NEXUS_DATABASE_URL: "sqlite+aiosqlite:////data/nexus.db"
+      NEXUS_JWT_SECRET: "${NEXUS_JWT_SECRET:-}"
+      NEXUS_ACCESS_TOKEN_TTL_SECONDS: "${NEXUS_ACCESS_TOKEN_TTL_SECONDS:-3600}"
+      NEXUS_REFRESH_TOKEN_TTL_SECONDS: "${NEXUS_REFRESH_TOKEN_TTL_SECONDS:-2592000}"
+      NEXUS_ENCRYPTION_KEY: "${NEXUS_ENCRYPTION_KEY:-}"
+      NEXUS_BRIDGE_HOST: "${NEXUS_BRIDGE_HOST:-127.0.0.1}"
+      NEXUS_BRIDGE_PORT: "${NEXUS_BRIDGE_PORT:-8790}"
+      NEXUS_BRIDGE_ALLOWED_ORIGINS: "${NEXUS_BRIDGE_ALLOWED_ORIGINS:-}"
+      NEXUS_OPENAI_ENABLED: "${NEXUS_OPENAI_ENABLED:-false}"
+      NEXUS_OPENAI_BASE_URL: "${NEXUS_OPENAI_BASE_URL:-}"
+      NEXUS_OPENAI_API_KEY_REF: "${NEXUS_OPENAI_API_KEY_REF:-}"
+      NEXUS_OLLAMA_BASE_URL: "${NEXUS_OLLAMA_BASE_URL:-http://127.0.0.1:11434}"
+    volumes:
+      - backend-data:/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # first boot applies Alembic migrations before serving
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.frontend
+    ports:
+      - "127.0.0.1:${NEXUS_FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - -O
+        - /dev/null
+        - http://127.0.0.1:3000/
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  browser-bridge:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.bridge
+    # SPEC §3.2: the bridge binds 127.0.0.1 only. The bridge slice hard-codes
+    # that loopback bind, so it runs on the host network: the process binds the
+    # host's loopback directly and no port is published. Requires Docker with
+    # host networking (Linux engine, Docker Desktop >= 4.34) — docs/DEPLOYMENT.md.
+    network_mode: host
+    environment:
+      # The bridge reads unprefixed BRIDGE_* variables; NEXUS_BRIDGE_PORT stays
+      # the single source in .env (it also feeds the backend's bridge_port).
+      BRIDGE_PORT: "${NEXUS_BRIDGE_PORT:-8790}"
+      BRIDGE_ALLOWED_ORIGINS: "${NEXUS_BRIDGE_ALLOWED_ORIGINS:-}"
+      BRIDGE_API_TOKEN: "${NEXUS_BRIDGE_API_TOKEN:-}"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${NEXUS_BRIDGE_PORT:-8790}/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  backend-data:
