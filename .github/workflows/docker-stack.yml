@@ -1,0 +1,144 @@
+name: docker-stack
+
+# Validation of the local runtime environment: the compose file, the service
+# images and the health endpoints of the running stack.
+#
+# Two jobs:
+#   * `container-stack` builds the images from the minimal fixtures and always
+#     runs.  It is a deterministic check of the packaging itself.
+#   * `container-stack-merged-sources` builds the same images from the real
+#     application slices.  It is informational: a failure there belongs to the
+#     slice that is being merged, not to this workflow, so it never blocks a
+#     merge of the project.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-stack-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  container-stack:
+    name: Build and start the local stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install the test dependencies
+        run: python -m pip install --upgrade pip pytest pyyaml jsonschema
+
+      - name: Validate the compose file
+        run: docker compose config --quiet
+
+      - name: Run the static validation tests
+        run: python -m pytest tests/test_docker_stack.py -q
+
+      - name: Provide the application sources
+        run: python tests/fixtures/dockerstack/install_fixtures.py --force
+
+      - name: Build and start the stack
+        run: docker compose up --build --detach
+
+      - name: Wait for the health endpoints
+        run: |
+          set -eu
+          backend_port="${NEXUS_BACKEND_PORT:-8000}"
+          frontend_port="${NEXUS_FRONTEND_PORT:-3000}"
+          bridge_port="${NEXUS_BRIDGE_PORT:-8790}"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error "http://127.0.0.1:${backend_port}/health" > /dev/null \
+              && curl --fail --silent --show-error "http://127.0.0.1:${bridge_port}/health" > /dev/null \
+              && curl --fail --silent --show-error "http://127.0.0.1:${frontend_port}/healthz" > /dev/null; then
+              echo "the stack is healthy after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose ps
+          docker compose logs --no-color
+          exit 1
+
+      - name: Show the running services
+        run: docker compose ps
+
+      - name: Show the logs
+        if: always()
+        run: docker compose logs --no-color
+
+      - name: Tear the stack down
+        if: always()
+        run: docker compose down --volumes
+
+  container-stack-merged-sources:
+    name: Build and start the stack with the merged sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Informational: a failure belongs to the slice that is being merged.
+    continue-on-error: true
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Detect the merged sources
+        id: sources
+        run: |
+          if python tests/fixtures/dockerstack/install_fixtures.py --check; then
+            echo "real=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "real=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Provide the missing application sources
+        if: steps.sources.outputs.real == 'true'
+        run: python tests/fixtures/dockerstack/install_fixtures.py
+
+      - name: Build and start the stack
+        if: steps.sources.outputs.real == 'true'
+        run: docker compose up --build --detach
+
+      - name: Wait for the health endpoints
+        if: steps.sources.outputs.real == 'true'
+        run: |
+          set -eu
+          backend_port="${NEXUS_BACKEND_PORT:-8000}"
+          frontend_port="${NEXUS_FRONTEND_PORT:-3000}"
+          bridge_port="${NEXUS_BRIDGE_PORT:-8790}"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error "http://127.0.0.1:${backend_port}/health" > /dev/null \
+              && curl --fail --silent --show-error "http://127.0.0.1:${bridge_port}/health" > /dev/null \
+              && curl --fail --silent --show-error "http://127.0.0.1:${frontend_port}/healthz" > /dev/null; then
+              echo "the stack is healthy after ${attempt} attempt(s)"
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose ps
+          docker compose logs --no-color
+          exit 1
+
+      - name: Show the logs
+        if: always()
+        run: docker compose logs --no-color
+
+      - name: Tear the stack down
+        if: always()
+        run: docker compose down --volumes

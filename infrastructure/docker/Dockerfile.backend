@@ -1,0 +1,59 @@
+# syntax=docker/dockerfile:1
+#
+# Dockerfile.backend -- the NEXUS FastAPI backend (docs/SPEC.md sections 4 and 10).
+#
+# The image contains the backend package, its dependencies and nothing else.
+# The application directory is resolved at build time (see resolve_source.py)
+# so the image works both with the `backend/` layout and with the
+# `apps/backend/` layout described in the specification.
+#
+# Runtime contract:
+#   * listens on 0.0.0.0:8000 inside the container (published on 127.0.0.1 only)
+#   * serves the public health endpoint on GET /health
+#   * applies the Alembic migrations before the first request is served
+#   * runs as an unprivileged user and writes only to /data
+
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    NEXUS_BUILD_ENV=/tmp/nexus-build.env
+
+WORKDIR /src
+
+# One copy of the repository: the layout of the slices is resolved afterwards.
+COPY . /src
+
+# Locate the backend package, its import root, the Alembic configuration and
+# the dependencies to install.  Fails loudly when the backend slice is absent.
+RUN python /src/infrastructure/docker/resolve_source.py \
+        --root /src \
+        --env-file "${NEXUS_BUILD_ENV}" \
+        --requirements-file /tmp/nexus-requirements.txt \
+        backend \
+    && cat "${NEXUS_BUILD_ENV}"
+
+# Only the dependencies are installed, never the package itself: the service
+# always runs from the copied source tree, which keeps the image independent
+# from the packaging metadata of the individual slices.
+RUN pip install -r /tmp/nexus-requirements.txt
+
+# Unprivileged runtime user.  /data is the mount point of the named volume
+# that holds the SQLite database.
+RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin nexus \
+    && mkdir -p /data \
+    && chown nexus:nexus /data
+
+USER nexus
+WORKDIR /src
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)" || exit 1
+
+# The build facts are sourced at start time: they tell the process which
+# package to import and where the migrations live.
+CMD ["sh", "-c", "set -eu; . \"${NEXUS_BUILD_ENV}\"; export PYTHONPATH=\"${NEXUS_BACKEND_IMPORT_ROOT}${PYTHONPATH:+:${PYTHONPATH}}\"; if [ -n \"${NEXUS_BACKEND_ALEMBIC}\" ]; then alembic -c \"${NEXUS_BACKEND_ALEMBIC}\" upgrade head; fi; exec uvicorn \"${NEXUS_BACKEND_MODULE}\" --host 0.0.0.0 --port 8000"]

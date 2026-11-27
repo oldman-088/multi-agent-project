@@ -1,0 +1,38 @@
+# Secrets and local environment files (never commit them)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Local databases
+*.db
+*.db-wal
+*.db-shm
+
+# Test and tooling artifacts
+coverage/
+htmlcov/
+test-results/
+playwright-report/
+
+# Editor and operating system noise
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,54 @@
+# syntax=docker/dockerfile:1
+#
+# Dockerfile.bridge -- the NEXUS Local Browser Bridge (docs/SPEC.md sections 3.2 and 10).
+#
+# The bridge is a small FastAPI + websockets service that connects the
+# userscript running in the owner's browser to the backend.  It keeps every
+# piece of state in memory and writes nothing to disk.
+#
+# The application directory is resolved at build time (see resolve_source.py)
+# so the image works with `integrations/browser-bridge/` and with any other
+# directory that ships `src/app.py`.
+
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    NEXUS_BUILD_ENV=/tmp/nexus-build.env
+
+WORKDIR /src
+COPY . /src
+
+RUN python /src/infrastructure/docker/resolve_source.py \
+        --root /src \
+        --env-file "${NEXUS_BUILD_ENV}" \
+        --requirements-file /tmp/nexus-requirements.txt \
+        bridge \
+    && cat "${NEXUS_BUILD_ENV}"
+
+# The bridge modules import each other flat (`from pairing import ...`), so the
+# whole application directory becomes the import root of the process.
+RUN set -eux; \
+    . "${NEXUS_BUILD_ENV}"; \
+    mkdir -p /app; \
+    cp -a "${NEXUS_BRIDGE_APP_DIR}"/. /app/; \
+    pip install -r /tmp/nexus-requirements.txt; \
+    useradd --create-home --uid 10002 --shell /usr/sbin/nologin nexus-bridge
+
+USER nexus-bridge
+WORKDIR /app
+
+ENV PYTHONPATH=/app \
+    BRIDGE_APP_DIR=/app
+
+EXPOSE 8790
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=5 \
+    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('BRIDGE_PORT', '8790') + '/health', timeout=3)" || exit 1
+
+# The entry point keeps the bridge's own application factory (and therefore
+# its pairing, origin and token checks) untouched; it only decides which
+# address the process binds inside the container.
+CMD ["python", "/src/infrastructure/docker/bridge_entrypoint.py"]
