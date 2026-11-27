@@ -1,0 +1,44 @@
+<!doctype html>
+<!--
+  `lang` and `dir` are intentionally NOT hard-coded here: SPEC §8.2 requires both
+  to come from the active language. The inline script below applies the stored (or
+  browser-preferred) language before first paint so the shell never flashes in the
+  wrong direction, and `I18nProvider` keeps them in sync afterwards.
+-->
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>NEXUS AGENT OS</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%237aa2ff'/%3E%3C/svg%3E" />
+    <script>
+      // Pre-paint bootstrap: keep in sync with src/i18n/languages.ts.
+      (function () {
+        var supported = { ar: 'rtl', en: 'ltr', fa: 'rtl' };
+        var language = 'ar';
+        try {
+          var stored = window.localStorage.getItem('nexus.language');
+          if (stored && supported[stored]) {
+            language = stored;
+          } else {
+            var preferred = navigator.languages || [navigator.language || ''];
+            for (var i = 0; i < preferred.length; i += 1) {
+              var base = String(preferred[i]).toLowerCase().split('-')[0];
+              if (supported[base]) { language = base; break; }
+            }
+          }
+        } catch (error) {
+          /* storage blocked: fall back to the Arabic default */
+        }
+        var root = document.documentElement;
+        root.setAttribute('lang', language);
+        root.setAttribute('dir', supported[language]);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

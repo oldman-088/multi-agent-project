@@ -1,0 +1,29 @@
+{
+  "name": "nexus-agent-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NEXUS AGENT OS — web frontend workspace, i18n coverage checks and accessibility (axe) test suite",
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace apps/web",
+    "typecheck": "npm run typecheck --workspace apps/web && tsc --noEmit -p apps/web/tsconfig.node.json",
+    "lint": "npm run lint --workspace apps/web",
+    "i18n:check": "npm run i18n:check --workspace apps/web",
+    "test:unit": "npm run test --workspace apps/web",
+    "test:a11y": "playwright test --config tests/a11y/playwright.a11y.config.ts",
+    "screenshots": "playwright test --config tests/a11y/playwright.a11y.config.ts --project=screenshots",
+    "check": "npm run lint && npm run typecheck && npm run i18n:check && npm run test:unit && npm run build"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.1",
+    "@playwright/test": "1.65.1",
+    "@types/node": "22.20.7",
+    "typescript": "5.9.3"
+  }
+}

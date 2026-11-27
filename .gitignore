@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+apps/web/dist/
+*.tsbuildinfo
+
+# test artifacts
+test-results/
+playwright-report/
+blob-report/
+coverage/
+
+# local environment
+.env
+.env.local
+.env.*.local
+
+# editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
