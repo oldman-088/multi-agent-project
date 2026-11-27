@@ -12,11 +12,14 @@ name: ci
 # backend (uvicorn) and the frontend dev server itself, waits for both to be
 # healthy and then runs `playwright test`.
 #
-# Jobs are guarded with `if: -f <file>` so the workflow behaves correctly at
-# every stage of the build: the TS job appears once the frontend package exists,
-# the check-script job once the backend quality gate exists, and the E2E job
-# once the Playwright suite exists. Jobs whose slice is not present are skipped
-# with a clear reason instead of failing on a missing file.
+# Jobs are guarded with a `hashFiles(...)` presence check so the workflow
+# behaves correctly at every stage of the build: the TS job appears once the
+# frontend package exists, the check-script job once the backend quality gate
+# exists, and the E2E job once the Playwright suite exists. Jobs whose slice is
+# not present are skipped with a clear reason instead of failing on a missing
+# file. (`hashFiles` is the supported way to test for a file in a job `if`;
+# a bare shell `-f` test is not a valid GitHub Actions expression and makes the
+# whole workflow fail to parse.)
 
 on:
   push:
@@ -72,7 +75,7 @@ jobs:
     name: TypeScript checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: -f package.json
+    if: ${{ hashFiles('package.json') != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -90,7 +93,7 @@ jobs:
     name: Check script (quality gate)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: -f scripts/check.sh
+    if: ${{ hashFiles('scripts/check.sh') != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -111,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [typecheck]
-    if: -f playwright.config.ts
+    if: ${{ hashFiles('playwright.config.ts') != '' }}
     env:
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
       API_BASE_URL: http://127.0.0.1:8000

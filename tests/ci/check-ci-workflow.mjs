@@ -107,6 +107,23 @@ section('Safety', () => {
   check('does not commit a .env file', !/^\s*\.env\s*$/m.test(content));
 });
 
+section('Job guards (valid GitHub Actions expressions)', () => {
+  // A bare shell file test (`if: -f <file>`) is NOT a valid GitHub Actions
+  // expression: it makes the whole workflow fail to parse ("workflow file
+  // issue") and no jobs are created. Guards must use hashFiles(...).
+  check(
+    'does not use the invalid `if: -f <file>` shell test',
+    !/^\s*if:\s*-f\s/m.test(content)
+  );
+  check('guards presence with hashFiles expressions', (content.match(/hashFiles\(/g) || []).length >= 3);
+  check(
+    'guards every conditional job (typecheck, check, e2e)',
+    /typecheck:[\s\S]*?if:\s*\$\{\{\s*hashFiles\(/.test(content) &&
+      /check:[\s\S]*?if:\s*\$\{\{\s*hashFiles\(/.test(content) &&
+      /e2e:[\s\S]*?if:\s*\$\{\{\s*hashFiles\(/.test(content)
+  );
+});
+
 console.log(`\n${passed} passed, ${failures.length} failed.`);
 if (failures.length > 0) {
   console.error('Failed checks:');
