@@ -1,0 +1,48 @@
+{
+  "app": {
+    "title": "NEXUS",
+    "tagline": "کنسول عملیات عاملان"
+  },
+  "shell": {
+    "skipToContent": "پرش به محتوا",
+    "mainNav": "ناوبری اصلی",
+    "languageSelect": "انتخاب زبان"
+  },
+  "nav": {
+    "home": "صفحه اصلی"
+  },
+  "home": {
+    "heading": "به NEXUS خوش آمدید",
+    "description": "پوسته برنامه آماده است. برای پیمایش سریع از پالت فرمان استفاده کنید.",
+    "languageLabel": "زبان",
+    "directionLabel": "جهت رابط کاربری",
+    "themeLabel": "پوسته",
+    "rtl": "راست به چپ (RTL)",
+    "ltr": "چپ به راست (LTR)",
+    "openPaletteHint": "برای باز کردن پالت فرمان {shortcut} را بزنید"
+  },
+  "palette": {
+    "open": "باز کردن پالت فرمان",
+    "placeholder": "برای جستجو دستوری تایپ کنید…",
+    "empty": "دستور مناسبی یافت نشد",
+    "commands": {
+      "goHome": "رفتن به صفحه اصلی",
+      "toggleTheme": "تغییر پوسته",
+      "setLanguageAr": "تغییر زبان به عربی",
+      "setLanguageEn": "تغییر زبان به انگلیسی",
+      "setLanguageFa": "تغییر زبان به فارسی"
+    }
+  },
+  "theme": {
+    "dark": "پوسته تاریک",
+    "light": "پوسته روشن"
+  },
+  "languages": {
+    "ar": "العربية",
+    "en": "English",
+    "fa": "فارسی"
+  },
+  "dialog": {
+    "close": "بستن"
+  }
+}
