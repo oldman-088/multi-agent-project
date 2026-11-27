@@ -1,0 +1,47 @@
+# .dockerignore -- keep secrets, host artifacts and caches out of the images.
+# All three services build with the repository root as their context.
+
+# Secrets and local environment files (never bake them into an image)
+.env
+.env.*
+!.env.example
+
+# Version control and CI
+.git
+.gitignore
+.github
+
+# Node
+node_modules
+npm-debug.log*
+
+# Python
+__pycache__
+*.py[cod]
+.venv
+venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+
+# Local databases (the compose stack uses a named volume instead)
+*.db
+*.db-wal
+*.db-shm
+
+# Test and tooling artifacts
+coverage
+htmlcov
+test-results
+playwright-report
+artifacts
+
+# Editor and operating system noise
+.idea
+.vscode
+.DS_Store
