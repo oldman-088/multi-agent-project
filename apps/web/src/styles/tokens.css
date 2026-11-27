@@ -1,0 +1,76 @@
+/* Design tokens — Section 8.1 of docs/SPEC.md.
+   Every color, radius, shadow, spacing step and z-index is a --nx-* variable.
+   Components must consume these only through the Tailwind theme classes
+   (bg-nx-*, text-nx-*, rounded-nx-*, shadow-nx-*, z-nx-*); the ESLint rules
+   in eslint-rules/ fail the build on hard-coded palette classes, raw hex
+   values and physical-direction classes (ml-/mr-/pl-/pr-/left-/right-). */
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Spacing steps (4px base; mirrored by Tailwind's --spacing scale). */
+  --nx-space-1: 0.25rem;
+  --nx-space-2: 0.5rem;
+  --nx-space-3: 0.75rem;
+  --nx-space-4: 1rem;
+  --nx-space-5: 1.25rem;
+  --nx-space-6: 1.5rem;
+  --nx-space-8: 2rem;
+  --nx-space-10: 2.5rem;
+  --nx-space-12: 3rem;
+  --nx-space-16: 4rem;
+
+  /* Radii */
+  --nx-radius-sm: 0.25rem;
+  --nx-radius-md: 0.5rem;
+  --nx-radius-lg: 0.75rem;
+  --nx-radius-full: 9999px;
+
+  /* Shadows */
+  --nx-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --nx-shadow-md: 0 4px 12px rgb(0 0 0 / 0.35);
+  --nx-shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45);
+
+  /* Z-index scale */
+  --nx-z-base: 0;
+  --nx-z-sticky: 100;
+  --nx-z-dropdown: 400;
+  --nx-z-modal: 500;
+  --nx-z-toast: 600;
+
+  /* Typography */
+  --nx-font-sans: 'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+  --nx-font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', monospace;
+
+  /* Dark theme colors (default) */
+  --nx-color-bg: #0b0e13;
+  --nx-color-surface: #12161d;
+  --nx-color-surface-raised: #1a202a;
+  --nx-color-border: #262d38;
+  --nx-color-fg: #e7ecf3;
+  --nx-color-fg-muted: #9aa7b8;
+  --nx-color-primary: #3d63e6; /* solid primary (button backgrounds; white text ≥ 4.5:1) */
+  --nx-color-primary-fg: #ffffff;
+  --nx-color-accent: #82aaff; /* accent readable as text on dark surfaces */
+  --nx-color-overlay: rgb(5 8 12 / 0.72);
+  --nx-color-danger: #ef4444;
+  --nx-color-focus: #82aaff;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --nx-color-bg: #f5f6f8;
+  --nx-color-surface: #ffffff;
+  --nx-color-surface-raised: #eef1f5;
+  --nx-color-border: #dde2ea;
+  --nx-color-fg: #14181f;
+  --nx-color-fg-muted: #59616f;
+  --nx-color-primary: #2563eb;
+  --nx-color-primary-fg: #ffffff;
+  --nx-color-accent: #1d4ed8;
+  --nx-color-overlay: rgb(20 24 31 / 0.55);
+  --nx-color-danger: #dc2626;
+  --nx-color-focus: #1d4ed8;
+}

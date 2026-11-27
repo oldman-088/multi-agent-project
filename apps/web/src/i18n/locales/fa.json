@@ -1,0 +1,178 @@
+{
+  "app": {
+    "title": "NEXUS",
+    "tagline": "کنسول عملیات عاملان"
+  },
+  "shell": {
+    "skipToContent": "پرش به محتوا",
+    "mainNav": "ناوبری اصلی",
+    "languageSelect": "انتخاب زبان"
+  },
+  "nav": {
+    "home": "صفحه اصلی",
+    "agents": "عاملان",
+    "chat": "گفتگو",
+    "connections": "اتصالات"
+  },
+  "home": {
+    "heading": "به NEXUS خوش آمدید",
+    "description": "پوسته برنامه آماده است. برای پیمایش سریع از پالت فرمان استفاده کنید.",
+    "languageLabel": "زبان",
+    "directionLabel": "جهت رابط کاربری",
+    "themeLabel": "پوسته",
+    "rtl": "راست به چپ (RTL)",
+    "ltr": "چپ به راست (LTR)",
+    "openPaletteHint": "برای باز کردن پالت فرمان {shortcut} را بزنید"
+  },
+  "states": {
+    "loading": "در حال بارگذاری…",
+    "errorTitle": "مشکلی پیش آمد",
+    "retry": "تلاش دوباره"
+  },
+  "agents": {
+    "heading": "عاملان",
+    "create": "عامل جدید",
+    "createTitle": "ایجاد عامل",
+    "createDescription": "نقش، هدف و دستورالعمل عامل را مشخص کنید. نسخه ۱ هنگام ایجاد ذخیره می‌شود.",
+    "editTitle": "ویرایش عامل",
+    "editDescription": "ذخیره، نسخه تغییرناپذیر جدیدی می‌افزاید؛ نسخه‌های موجود هرگز تغییر نمی‌کنند.",
+    "emptyTitle": "هنوز عاملی نیست",
+    "emptyDescription": "برای شروع اجرای وظایف، اولین عامل خود را بسازید.",
+    "roleUnset": "بدون نقش",
+    "versionLabel": "نسخه {version}",
+    "status": {
+      "enabled": "فعال",
+      "disabled": "غیرفعال",
+      "archived": "بایگانی‌شده"
+    },
+    "actions": {
+      "edit": "ویرایش",
+      "enable": "فعال‌سازی",
+      "disable": "غیرفعال‌سازی",
+      "archive": "بایگانی"
+    },
+    "form": {
+      "name": "نام",
+      "nameRequired": "نام الزامی است.",
+      "description": "توضیح",
+      "role": "نقش",
+      "goal": "هدف",
+      "instructions": "دستورالعمل‌ها",
+      "runtime": "زمان اجرا",
+      "runtimeNative": "بومی",
+      "runtimeSoftwareTeam": "تیم نرم‌افزاری",
+      "tools": "ابزارها",
+      "toolsPlaceholder": "calc.evaluate, time.now",
+      "toolsHint": "شناسه ابزارها با ویرگول، از فهرست مجاز دروازه ابزار.",
+      "changeNote": "یادداشت تغییر",
+      "cancel": "انصراف",
+      "saveCreate": "ایجاد عامل",
+      "saveEdit": "ذخیره نسخه جدید"
+    }
+  },
+  "chat": {
+    "heading": "گفتگو",
+    "newChat": "گفتگوی جدید",
+    "agentLabel": "عامل",
+    "noAgents": "عاملی در دسترس نیست",
+    "conversationsNav": "گفتگوها",
+    "untitled": "بدون عنوان",
+    "noConversations": "هنوز گفتگویی نیست",
+    "emptyThread": "برای شروع گفتگو پیامی بفرستید.",
+    "composerLabel": "پیام",
+    "composerPlaceholder": "پیامی بفرستید…",
+    "send": "ارسال",
+    "streaming": "دستیار در حال نوشتن است…",
+    "streamError": "جریان زنده قطع شد.",
+    "roles": {
+      "user": "شما",
+      "assistant": "دستیار"
+    },
+    "tools": {
+      "running": "در حال اجرا",
+      "awaiting": "در انتظار تأیید",
+      "completed": "کامل شد",
+      "failed": "ناموفق",
+      "duration": "{ms} میلی‌ثانیه",
+      "resultReady": "ابزار {tool} پایان یافت.",
+      "resultFailed": "ابزار {tool} ناموفق بود."
+    },
+    "approvals": {
+      "groupLabel": "تأیید ابزار",
+      "requested": "عامل درخواست تأیید برای اجرای {tool} را دارد.",
+      "approve": "تأیید",
+      "reject": "رد",
+      "approved": "تأیید شد",
+      "rejected": "رد شد"
+    }
+  },
+  "connections": {
+    "heading": "اتصالات",
+    "pairDevice": "جفت‌سازی دستگاه پل",
+    "devices": {
+      "heading": "دستگاه‌های پل",
+      "emptyTitle": "دستگاه جفت‌شده‌ای نیست",
+      "emptyDescription": "برای استفاده عاملان، یک دستگاه مرورگر را از طریق پل محلی جفت کنید.",
+      "userscript": "اسکریپت کاربر {version}",
+      "ready": "آماده",
+      "revoked": "لغو شده",
+      "lastSeen": "آخرین مشاهده {time}",
+      "revoke": "لغو"
+    },
+    "connections": {
+      "heading": "اتصالات ذخیره‌شده",
+      "empty": "هنوز اتصال ذخیره‌شده‌ای نیست."
+    },
+    "sessions": {
+      "heading": "نشست‌های مرورگر",
+      "empty": "پل هنوز نشست مرورگری گزارش نکرده است."
+    },
+    "status": {
+      "disabled": "غیرفعال",
+      "enabled": "فعال",
+      "error": "خطا"
+    },
+    "pair": {
+      "title": "جفت‌سازی دستگاه پل",
+      "description": "پل محلی اعتبارنامه جفت‌سازی یک‌باره صادر می‌کند. فقط یک بار نمایش داده می‌شود و تنها هش (hash) آن ذخیره می‌شود.",
+      "label": "نام دستگاه",
+      "labelRequired": "نام دستگاه الزامی است.",
+      "userscriptVersion": "نسخه اسکریپت کاربر",
+      "generate": "تولید کد جفت‌سازی",
+      "cancel": "انصراف",
+      "codeTitle": "اعتبارنامه جفت‌سازی یک‌باره",
+      "codeOnce": "همین حالا آن را در اسکریپت کاربر خود کپی کنید — در {seconds} ثانیه منقضی می‌شود و دوباره نمایش داده نخواهد شد.",
+      "confirmCode": "تأیید کد جفت‌سازی",
+      "confirmHint": "کد جفت‌سازی را برای تأیید بچسبانید. این کار دکمه ذخیره را فعال می‌کند.",
+      "provider": "ارائه‌دهنده اتصال ذخیره‌شده",
+      "save": "ذخیره اتصال"
+    }
+  },
+  "palette": {
+    "open": "باز کردن پالت فرمان",
+    "placeholder": "برای جستجو فرمانی بنویسید…",
+    "empty": "فرمان منطبقی نیست",
+    "commands": {
+      "goHome": "رفتن به صفحه اصلی",
+      "goAgents": "رفتن به عاملان",
+      "goChat": "رفتن به گفتگو",
+      "goConnections": "رفتن به اتصالات",
+      "toggleTheme": "تغییر پوسته",
+      "setLanguageAr": "تغییر زبان به عربی",
+      "setLanguageEn": "تغییر زبان به انگلیسی",
+      "setLanguageFa": "تغییر زبان به فارسی"
+    }
+  },
+  "theme": {
+    "dark": "پوسته تیره",
+    "light": "پوسته روشن"
+  },
+  "languages": {
+    "ar": "العربية",
+    "en": "English",
+    "fa": "فارسی"
+  },
+  "dialog": {
+    "close": "بستن"
+  }
+}
