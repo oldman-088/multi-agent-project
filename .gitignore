@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local databases & artifacts
+*.db
+*.db-wal
+*.db-shm
+nexus.db*
+artifacts/
+
+# Secrets — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+
+# Research clones (Phase 0) are excluded from git
+research/repos/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
