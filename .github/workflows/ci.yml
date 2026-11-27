@@ -1,0 +1,347 @@
+name: ci
+
+# Continuous integration for NEXUS AGENT OS (docs/SPEC.md §9).
+#
+# Superset workflow covering the slices in this repository:
+#
+#   Orchestration slice (apps/backend):
+#     style (ruff) · python types (mypy strict) · tests (pytest) ·
+#     migrations (SQLite) · migrations (PostgreSQL 16)
+#   Project gate: scripts/check.sh (runs every gate the slices provide)
+#   Frontend / E2E slice (guarded by the `detect` job so the workflow stays
+#     green and useful at every stage of the build): TypeScript typecheck,
+#     Playwright E2E against a locally started stack, and the CI-contract
+#     validator from tests/ci/.
+#
+# Jobs whose input files are absent are skipped with a visible reason instead
+# of failing on a missing file.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Probes the checkout once; every guarded job asks it whether its slice is
+  # present.  (job-level `if` cannot test files before checkout — a probe job
+  # with outputs can.)
+  detect:
+    name: Detect slices
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      orchestration: ${{ steps.probe.outputs.orchestration }}
+      frontend: ${{ steps.probe.outputs.frontend }}
+      e2e: ${{ steps.probe.outputs.e2e }}
+      ci_validator: ${{ steps.probe.outputs.ci_validator }}
+      check_script: ${{ steps.probe.outputs.check_script }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: probe
+        name: Probe for slices
+        run: |
+          probe() {
+            local name="$1" path="$2"
+            if [ -f "$path" ]; then
+              echo "${name}=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "${name}=false" >> "$GITHUB_OUTPUT"
+              echo ":: ${name} slice not present (${path}) — its jobs will be skipped"
+            fi
+          }
+          probe orchestration apps/backend/pyproject.toml
+          probe frontend package.json
+          probe e2e playwright.config.ts
+          probe ci_validator tests/ci/check-ci-workflow.mjs
+          probe check_script scripts/check.sh
+
+  # ---- Orchestration slice gates (apps/backend) ----------------------------
+
+  style:
+    name: Style (ruff)
+    needs: [detect]
+    if: needs.detect.outputs.orchestration == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install orchestration-slice dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "apps/backend[dev]"
+      - name: ruff check + ruff format --check
+        run: bash scripts/check.sh style
+
+  python-typecheck:
+    name: Python types (mypy strict)
+    needs: [detect]
+    if: needs.detect.outputs.orchestration == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install orchestration-slice dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "apps/backend[dev]"
+      - name: mypy (strict on app/workflows)
+        run: bash scripts/check.sh types
+
+  tests:
+    name: Tests (pytest, SQLite)
+    needs: [detect]
+    if: needs.detect.outputs.orchestration == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install orchestration-slice dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "apps/backend[dev]"
+      - name: pytest
+        run: bash scripts/check.sh tests
+
+  migrations-sqlite:
+    name: Migrations (SQLite)
+    needs: [detect]
+    if: needs.detect.outputs.orchestration == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install orchestration-slice dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "apps/backend[dev]"
+      - name: Alembic round-trip on an empty SQLite database
+        run: bash scripts/check.sh migrations-sqlite
+
+  migrations-postgres:
+    name: Migrations (PostgreSQL 16)
+    needs: [detect]
+    if: needs.detect.outputs.orchestration == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nexus
+          POSTGRES_PASSWORD: nexus_ci_only
+          POSTGRES_DB: nexus_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEXUS_TEST_POSTGRES_URL: postgresql+psycopg://nexus:nexus_ci_only@127.0.0.1:5432/nexus_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install orchestration-slice dependencies (with PostgreSQL driver)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "apps/backend[dev,postgres]"
+      - name: Alembic round-trip on an empty PostgreSQL database
+        run: bash scripts/check.sh migrations-postgres
+      - name: Full test suite against PostgreSQL (claims, store, migrations)
+        working-directory: apps/backend
+        run: python -m pytest -q
+
+  # ---- Project quality gate ------------------------------------------------
+
+  check:
+    name: Check script (quality gate)
+    needs: [detect]
+    if: needs.detect.outputs.check_script == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies of every slice present
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f pyproject.toml ]; then pip install -e ".[test]"; fi
+          if [ -f apps/backend/pyproject.toml ]; then pip install -e "apps/backend[dev]"; fi
+      - name: Run the project check script
+        run: bash scripts/check.sh
+
+  # ---- Frontend / E2E gates (activate when that slice lands) ---------------
+
+  validate:
+    name: Validate CI workflow
+    needs: [detect]
+    if: needs.detect.outputs.ci_validator == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate the workflow definition
+        run: node tests/ci/check-ci-workflow.mjs
+
+  # TypeScript gate (job id `typecheck` is part of the CI contract).
+  typecheck:
+    name: TypeScript checks
+    needs: [detect]
+    if: needs.detect.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit
+
+  # End-to-end gate: starts the backend and the frontend locally, waits for
+  # both to be healthy, then runs the Playwright usage-journey suite against
+  # them (job id `e2e` is part of the CI contract).
+  e2e:
+    name: E2E (local frontend + backend)
+    needs: [detect, typecheck]
+    if: needs.detect.outputs.e2e == 'true' && needs.typecheck.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+      API_BASE_URL: http://127.0.0.1:8000
+      # Absolute SQLite path so the Alembic migration and uvicorn both use the
+      # same database file regardless of their working directory.
+      NEXUS_DATABASE_URL: sqlite+aiosqlite:////tmp/nexus_ci.db
+      # CI-only values for the two secrets the backend requires at startup.
+      # These are throwaway runner values, not real credentials.
+      NEXUS_JWT_SECRET: ci-only-runner-secret-not-a-real-key
+      NEXUS_ENCRYPTION_KEY: zZV4k3J1q0l9nQ7mYb8sC2dF5gH6jK0lM4nO9pQ1rS3tU=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          npm ci
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Prepare the backend database
+        working-directory: backend
+        run: alembic upgrade head
+      - name: Start the local stack and run E2E
+        run: |
+          set -euo pipefail
+
+          API="${API_BASE_URL:-http://127.0.0.1:8000}"
+          FRONT="${PLAYWRIGHT_BASE_URL:-http://127.0.0.1:3000}"
+          backend_pid=""
+          frontend_pid=""
+
+          cleanup() {
+            [[ -n "$backend_pid" ]] && kill "$backend_pid" 2>/dev/null || true
+            [[ -n "$frontend_pid" ]] && kill "$frontend_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          # --- Backend (FastAPI) -------------------------------------------
+          if [[ -f backend/app/main.py ]]; then
+            echo ":: Starting backend on ${API}"
+            uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 \
+              >/tmp/nexus-backend.log 2>&1 &
+            backend_pid=$!
+          else
+            echo ":: Backend slice not present, skipping backend start"
+          fi
+
+          # --- Frontend dev server (provided by the frontend slice) --------
+          # Prefer an explicit start:frontend script, fall back to `dev`.
+          frontend_script=""
+          if node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts['start:frontend']?0:1)" 2>/dev/null; then
+            frontend_script="start:frontend"
+          elif node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts.dev?0:1)" 2>/dev/null; then
+            frontend_script="dev"
+          fi
+
+          if [[ -n "$frontend_script" ]]; then
+            echo ":: Starting frontend (npm run ${frontend_script}) on ${FRONT}"
+            npm run "$frontend_script" >/tmp/nexus-frontend.log 2>&1 &
+            frontend_pid=$!
+          else
+            echo "ERROR: package.json defines neither 'start:frontend' nor 'dev' — the frontend slice is not present."
+            echo "::group::backend log"
+            [[ -f /tmp/nexus-backend.log ]] && tail -n 40 /tmp/nexus-backend.log
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          # --- Wait for both services to be healthy ------------------------
+          wait_http() {
+            local url="$1" name="$2" i
+            for i in $(seq 1 60); do
+              if curl -fsS -o /dev/null "$url" 2>/dev/null; then
+                echo ":: ${name} is ready at ${url}"
+                return 0
+              fi
+              sleep 1
+            done
+            echo "ERROR: ${name} did not become ready at ${url}"
+            echo "::group::${name} log"
+            [[ -f /tmp/nexus-backend.log ]] && tail -n 40 /tmp/nexus-backend.log
+            [[ -f /tmp/nexus-frontend.log ]] && tail -n 40 /tmp/nexus-frontend.log
+            echo "::endgroup::"
+            return 1
+          }
+
+          [[ -n "$backend_pid" ]] && wait_http "${API}/api/health" "backend"
+          wait_http "${FRONT}/" "frontend"
+
+          # --- Run the E2E suite ------------------------------------------
+          echo ":: Running Playwright E2E against ${FRONT} (API ${API})"
+          npx playwright test
