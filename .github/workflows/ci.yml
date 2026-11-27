@@ -1,0 +1,250 @@
+name: ci
+
+# Frontend / E2E continuous integration for NEXUS AGENT OS.
+#
+# Goal: give the E2E usage-journey pull request a green CI check on the head of
+# its branch. This workflow builds the environment, installs the dependencies of
+# both slices (Node for the frontend + Playwright, Python for the backend), runs
+# the project check script, the TypeScript type check and the Playwright E2E
+# suite against a locally started frontend + backend stack.
+#
+# It does NOT start the services for you outside CI: the E2E job starts the
+# backend (uvicorn) and the frontend dev server itself, waits for both to be
+# healthy and then runs `playwright test`.
+#
+# Presence of each slice is tested with a `hashFiles(...)` expression on the
+# STEP that needs the slice — never on the JOB `if`. `hashFiles()` is only
+# available in step-level conditions; putting it in a job-level `if:` makes
+# GitHub reject the ENTIRE workflow file at parse time ("workflow file issue",
+# zero jobs created). The E2E job instead runs a `detect` step (after checkout,
+# where file tests are valid) and gates its work on the boolean outputs.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ci.yml"
+      - "tests/ci/**"
+      - "tests/e2e/**"
+      - "frontend/**"
+      - "backend/**"
+      - "package.json"
+      - "package-lock.json"
+      - "playwright.config.ts"
+      - "tsconfig.json"
+      - "pyproject.toml"
+      - "scripts/**"
+  pull_request:
+    paths:
+      - ".github/workflows/ci.yml"
+      - "tests/ci/**"
+      - "tests/e2e/**"
+      - "frontend/**"
+      - "backend/**"
+      - "package.json"
+      - "package-lock.json"
+      - "playwright.config.ts"
+      - "tsconfig.json"
+      - "pyproject.toml"
+      - "scripts/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Always runs: validates that this workflow file itself is well-formed and
+  # contains every gate the E2E pull request needs. This is the automated test
+  # for the CI configuration.
+  validate:
+    name: Validate CI workflow
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate the workflow definition
+        run: node tests/ci/check-ci-workflow.mjs
+
+  # TypeScript gate. Guarded at STEP level on the TypeScript project file:
+  # `tsc --noEmit` reads tsconfig.json, so the job only does work when a TS
+  # project is actually present.
+  typecheck:
+    name: TypeScript checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        if: ${{ hashFiles('tsconfig.json') != '' }}
+        run: npm ci
+      - name: Type check
+        if: ${{ hashFiles('tsconfig.json') != '' }}
+        run: npx tsc --noEmit
+
+  # The project check script (docs/SPEC.md §9): ruff + mypy + pytest + Alembic.
+  # Runs once the backend slice that provides scripts/check.sh is present.
+  check:
+    name: Check script (quality gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend dependencies
+        if: ${{ hashFiles('scripts/check.sh') != '' }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+      - name: Run the project check script
+        if: ${{ hashFiles('scripts/check.sh') != '' }}
+        run: bash scripts/check.sh
+
+  # End-to-end gate: starts the backend and the frontend locally, waits for both
+  # to be healthy, then runs the Playwright usage-journey suite against them.
+  #
+  # A `detect` step (after checkout, where file tests are valid) reports which
+  # slices are present; each following step is gated on that. When the frontend
+  # slice is not implemented yet, the job skips cleanly instead of failing on a
+  # missing dev server — the check is green, with a clear reason.
+  e2e:
+    name: E2E (local frontend + backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [typecheck]
+    env:
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+      API_BASE_URL: http://127.0.0.1:8000
+      # Absolute SQLite path so the Alembic migration and uvicorn both use the
+      # same database file regardless of their working directory.
+      NEXUS_DATABASE_URL: sqlite+aiosqlite:////tmp/nexus_ci.db
+      # CI-only values for the two secrets the backend requires at startup.
+      # These are throwaway runner values, not real credentials.
+      NEXUS_JWT_SECRET: ci-only-runner-secret-not-a-real-key
+      NEXUS_ENCRYPTION_KEY: zZV4k3J1q0l9nQ7mYb8sC2dF5gH6jK0lM4nO9pQ1rS3tU=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Detect which slices are present
+        id: detect
+        run: |
+          set -euo pipefail
+          frontend=false
+          backend=false
+          if [[ -f package.json ]] &&
+            node -e "const p=require('./package.json');process.exit(p.scripts&&(p.scripts['start:frontend']||p.scripts.dev)?0:1)" 2>/dev/null; then
+            frontend=true
+          fi
+          if [[ -f scripts/check.sh ]]; then
+            backend=true
+          fi
+          echo "frontend_present=${frontend}" >> "$GITHUB_OUTPUT"
+          echo "backend_present=${backend}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Node dependencies
+        if: ${{ steps.detect.outputs.frontend_present == 'true' }}
+        run: npm ci
+
+      - name: Install backend dependencies
+        if: ${{ steps.detect.outputs.backend_present == 'true' }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+
+      - name: Install Playwright browsers
+        if: ${{ steps.detect.outputs.frontend_present == 'true' }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare the backend database
+        if: ${{ steps.detect.outputs.backend_present == 'true' }}
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: Start the local stack and run E2E
+        if: ${{ steps.detect.outputs.frontend_present == 'true' }}
+        run: |
+          set -euo pipefail
+
+          API="${API_BASE_URL:-http://127.0.0.1:8000}"
+          FRONT="${PLAYWRIGHT_BASE_URL:-http://127.0.0.1:3000}"
+          backend_pid=""
+          frontend_pid=""
+
+          cleanup() {
+            [[ -n "$backend_pid" ]] && kill "$backend_pid" 2>/dev/null || true
+            [[ -n "$frontend_pid" ]] && kill "$frontend_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          # --- Backend (FastAPI) -----------------------------------------
+          if [[ -f backend/app/main.py ]]; then
+            echo ":: Starting backend on ${API}"
+            uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 \
+              >/tmp/nexus-backend.log 2>&1 &
+            backend_pid=$!
+          else
+            echo ":: Backend slice not present, skipping backend start"
+          fi
+
+          # --- Frontend dev server (provided by the frontend slice) -------
+          # Prefer an explicit start:frontend script, fall back to `dev`.
+          frontend_script=""
+          if node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts['start:frontend']?0:1)" 2>/dev/null; then
+            frontend_script="start:frontend"
+          elif node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts.dev?0:1)" 2>/dev/null; then
+            frontend_script="dev"
+          fi
+
+          if [[ -n "$frontend_script" ]]; then
+            echo ":: Starting frontend (npm run ${frontend_script}) on ${FRONT}"
+            npm run "$frontend_script" >/tmp/nexus-frontend.log 2>&1 &
+            frontend_pid=$!
+          else
+            echo "ERROR: package.json defines neither 'start:frontend' nor 'dev' — the frontend slice is not present."
+            echo "::group::backend log"
+            [[ -f /tmp/nexus-backend.log ]] && tail -n 40 /tmp/nexus-backend.log
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          # --- Wait for both services to be healthy ------------------------
+          wait_http() {
+            local url="$1" name="$2" i
+            for i in $(seq 1 60); do
+              if curl -fsS -o /dev/null "$url" 2>/dev/null; then
+                echo ":: ${name} is ready at ${url}"
+                return 0
+              fi
+              sleep 1
+            done
+            echo "ERROR: ${name} did not become ready at ${url}"
+            echo "::group::${name} log"
+            [[ -f /tmp/nexus-backend.log ]] && tail -n 40 /tmp/nexus-backend.log
+            [[ -f /tmp/nexus-frontend.log ]] && tail -n 40 /tmp/nexus-frontend.log
+            echo "::endgroup::"
+            return 1
+          }
+
+          [[ -n "$backend_pid" ]] && wait_http "${API}/api/health" "backend"
+          wait_http "${FRONT}/" "frontend"
+
+          # --- Run the E2E suite ------------------------------------------
+          echo ":: Running Playwright E2E against ${FRONT} (API ${API})"
+          npx playwright test
