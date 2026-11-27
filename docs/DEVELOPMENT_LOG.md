@@ -64,6 +64,7 @@
 | `.venv/bin/ruff format --check backend/app tests` | 56 files already formatted |
 | `.venv/bin/mypy backend/app` | Success: no issues found in 52 source files |
 | `./scripts/check.sh` | CHECK PASSED |
+| GitHub Actions on PR #2 (`backend` workflow) | **4/4 jobs pass**: lint + type check (py3.12), pytest SQLite, pytest **PostgreSQL 16**, migrations SQLite |
 
 ### 5. Bugs found and fixed during verification
 

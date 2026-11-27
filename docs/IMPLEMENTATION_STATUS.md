@@ -52,6 +52,6 @@ tests. **Partial** = implemented with a documented limit. **Not started**.
 1. `http.get` validates the host allow-list but performs **no** outbound request in this slice; it
    returns `{"status": "not_fetched"}`. Reported as Partial rather than faked as Complete.
 2. There is no WebSocket endpoint yet; clients poll `/api/events?after_sequence=N`.
-3. The PostgreSQL CI job is defined in `.github/workflows/backend.yml`; it has not been observed
-   running on GitHub Actions from this environment. The same commands were executed locally against
-   a real PostgreSQL 16 server (see `docs/DEVELOPMENT_LOG.md`).
+3. ~~The PostgreSQL CI job has not been observed running.~~ Verified: on PR #2 all four CI jobs pass
+   (lint + type check, pytest on SQLite, pytest on **PostgreSQL 16**, migrations on SQLite), and the
+   suite was also run locally against a real PostgreSQL 16 server (see `docs/DEVELOPMENT_LOG.md`).
