@@ -12,6 +12,7 @@ database, authentication, REST contract, Tool Gateway, action policy and audit t
 | Backend REST API (`/api`) | Complete for this slice — see [`docs/API.md`](./docs/API.md) |
 | Database models + Alembic (SQLite **and** PostgreSQL) | Complete |
 | Auth, RBAC, audit, kill switch, action policy | Complete |
+| Agents, chat, runs/events/approvals REST surface | Complete — route modules under `apps/backend/app/api/routes/` |
 | Frontend, userscript, Local Browser Bridge, runtimes | Not started (later phases) |
 
 Full, evidence-based status: [`docs/IMPLEMENTATION_STATUS.md`](./docs/IMPLEMENTATION_STATUS.md).
@@ -20,12 +21,12 @@ Full, evidence-based status: [`docs/IMPLEMENTATION_STATUS.md`](./docs/IMPLEMENTA
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
-pip install -e ".[test]"
+pip install -e "./apps/backend[test]"
 cp .env.example .env        # then set NEXUS_JWT_SECRET and NEXUS_ENCRYPTION_KEY
 
-cd backend && NEXUS_DATABASE_URL="sqlite+aiosqlite:///./nexus.db" alembic upgrade head && cd ..
+cd apps/backend && NEXUS_DATABASE_URL="sqlite+aiosqlite:///./nexus.db" alembic upgrade head && cd ../..
 
-uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+cd apps/backend && uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 - Interactive API reference: <http://127.0.0.1:8000/docs>

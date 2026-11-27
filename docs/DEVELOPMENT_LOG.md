@@ -84,3 +84,63 @@
 - No outbound HTTP in `http.get` (documented, returns `not_fetched`).
 - Next step: frontend slice consumes `docs/API.md`; then the bridge/userscript slice adds the
   `/api/devices/pair` client flow and the WebSocket transport.
+
+
+---
+
+## Session 2026-11-27 — AATM-0eecd025 (agents / chat / events REST surface)
+
+### Environment
+
+Ubuntu sandbox, Python 3.11.2, venv at `.venv`, `pip install -e "./apps/backend[test]"`,
+no Docker. PostgreSQL 16 was available through the `pgserver` test extra for the PostgreSQL gate.
+
+### Work done
+
+1. **Layout.** `docs/SPEC.md` §10 puts the FastAPI monolith at `apps/backend/`, and this task's
+   acceptance criteria name `apps/backend/app/api/routes/`. The inherited slice lived at `backend/`,
+   so it moved with `git mv` (no logic change). The import root is now `app.*`; `pyproject.toml`,
+   `alembic/env.py`, `alembic.ini`, `scripts/check.sh`, `.github/workflows/backend.yml`, README,
+   `docs/DEVELOPMENT.md` and the `docs/API.md` lookup were repointed. `apps/backend/__init__.py` was
+   removed so `apps/backend/app` cannot be imported under two module names (mypy rejected that).
+2. **Concurrency defects fixed** (each reproduced first, then fixed, then tested):
+   - event sequence was read-then-written → duplicate numbers → 500 on the unique constraint;
+   - messages used `MAX(sequence)+1` → `[1,1,2,2,2]` ordering under concurrent sends;
+   - concurrent approve + reject both returned 200 and wrote **both** events;
+   - concurrent run transitions could emit both `run.started` and `run.cancelled`.
+3. **Correctness fixes found by the new tests:** `resume` emitted `run.started` *and* `run.resumed`
+   (now exactly one `run.resumed` carrying `from_checkpoint`); a duplicate checkpoint step raised
+   an `IntegrityError` (now 409 `checkpoint_exists`); `GET /api/events?run_id=<foreign>` returned an
+   empty 200 (now 404, matching the no-existence-leak rule).
+4. **Tests:** `tests/test_agents_routes.py`, `tests/test_runs_routes.py`,
+   `tests/test_events_routes.py` — 90 tests (43 + 35 + 12) covering auth on every route, RBAC, tenant isolation,
+   the event envelope, cursor paging, version immutability and the concurrency contracts.
+5. **Docs:** `docs/API.md` §5 (cursor semantics, concurrency contract, 409 codes),
+   `docs/TECHNICAL_DECISIONS.md` TD-007/TD-008, README and `docs/DEVELOPMENT.md` paths.
+
+### Tests run (exact commands, real results)
+
+Run from `apps/backend` unless stated.
+
+| Command | Result |
+|---|---|
+| `../../.venv/bin/python -m pytest tests -q` | **196 passed, 1 skipped** (PostgreSQL gate skipped, no `NEXUS_TEST_POSTGRES_URL`) |
+| `python -m pytest tests/test_agents_routes.py -q` | 43 passed |
+| `python -m pytest tests/test_runs_routes.py -q` | 35 passed |
+| `python -m pytest tests/test_events_routes.py -q` | 12 passed |
+| `python -m pytest tests -q --maxfail=1` with `NEXUS_TEST_POSTGRES_URL` set to a live PostgreSQL 16 (`pgserver`) **and** `NEXUS_TEST_POSTGRES_URL` gate exercised | **all passed, 197 tests, 0 skipped** |
+| `alembic upgrade head` → `downgrade base` → `upgrade head` on empty SQLite | rc=0 |
+| same on empty PostgreSQL 16 | rc=0 (both new revisions apply and downgrade) |
+| `ruff check app tests alembic` | All checks passed |
+| `ruff format --check app tests` | all files formatted |
+| `mypy app` | Success: no issues found in 52 source files |
+| `./scripts/check.sh` (repo root) | **CHECK PASSED** |
+
+### Known issues / next step
+
+- No WebSocket stream: clients replay `GET /api/events?after_sequence=N`. A long-poll/WS transport
+  is a later slice.
+- The event cursor is strictly increasing but not gap-free when a request rolls back after reserving
+  (documented in `docs/API.md` §5.2); this is safe for `after_sequence` semantics.
+- Next step: the frontend slice consumes `docs/API.md`; the execution runtime must emit
+  `agent.*` / `tool.execution.*` events through `event_service.append_event`.

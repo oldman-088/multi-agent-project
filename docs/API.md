@@ -1,6 +1,9 @@
 # NEXUS AGENT OS — REST API contract
 
-> **Owner:** Worker 1 — Backend Engineer (AATM-e7410b2b).
+> **Owner:** Worker 1 — Backend Engineer (AATM-e7410b2b; agents/chat/events surface AATM-0eecd025).
+> **Code layout:** `apps/backend/app/api/routes/{agents,runs}.py` hold the agents, conversations,
+> runs, events (`runs.events_router`) and approvals (`runs.approvals_router`) routers, per
+> SPEC §10.
 > **Source of truth:** [`docs/SPEC.md`](./SPEC.md). This file is the single shared contract between
 > the backend and the frontend; there is no second contract file.
 > **Generated reference:** the live OpenAPI document is served at `/openapi.json` and the browsable
@@ -284,9 +287,9 @@ curl -s -X PATCH http://127.0.0.1:8000/api/agents/agt_... \
 | POST | `/api/runs/{run_id}/resume` | `runs:write` | — | `RunOut` (`running`) |
 | POST | `/api/runs/{run_id}/cancel` | `runs:cancel` | — | `RunOut` (`cancelled`) |
 | POST | `/api/runs/{run_id}/complete` | `runs:write` | — | `RunOut` (`completed`) |
-| POST | `/api/runs/{run_id}/checkpoints` | `runs:write` | `?step&label` + `state` body | **201** `CheckpointOut` |
+| POST | `/api/runs/{run_id}/checkpoints` | `runs:write` | `?step&label` + `state` body | **201** `CheckpointOut` (409 `checkpoint_exists` for a step already recorded) |
 | GET | `/api/runs/{run_id}/events` | `events:read` | `?after_sequence&limit` | `EventOut[]` |
-| GET | `/api/events` | `events:read` | `?run_id&after_sequence&event_type&limit` | `EventOut[]` |
+| GET | `/api/events` | `events:read` | `?run_id&after_sequence&event_type&limit` | `EventOut[]` (404 `not_found` when `run_id` is unknown **or belongs to another organization**) |
 | GET | `/api/approvals` | `approvals:read` | `?status&run_id&limit&offset` | `Page[ApprovalOut]` |
 | POST | `/api/approvals/{approval_id}/decide` | `approvals:write` | `{approve: bool, note}` | `ApprovalOut` (decided twice ⇒ 409) |
 
@@ -295,7 +298,29 @@ curl -s -X PATCH http://127.0.0.1:8000/api/agents/agt_... \
 `resume_available → running|cancelled`, `failed → resume_available`. Anything else is **409 `illegal_transition`**.
 
 **Event ordering:** `sequence` is monotonic per run and is the client's resume cursor. Events are
-written in the same transaction as the state change; `after_sequence=N` replays everything after `N`.
+written in the same transaction as the state change; `after_sequence=N` replays everything after `N`
+(`N` is exclusive, so paging with the last seen sequence never repeats an event).
+
+- The next value is reserved with a single `UPDATE runs SET last_sequence = last_sequence + 1 …
+RETURNING last_sequence`, so two concurrent appends for one run can never be given the same number;
+  the insert additionally retries under a `SAVEPOINT` if a race is still lost.
+- A reservation whose request rolls back is skipped, not reused. The sequence is therefore strictly
+  increasing but not necessarily gap-free; `after_sequence` semantics are unaffected.
+- Exactly **one** event is emitted per state change: resuming a `paused`, `waiting_for_user` or
+  `resume_available` run emits `run.resumed` (with `payload.from_checkpoint`), never a second
+  `run.started`. Repeating a transition that is already in effect is an idempotent no-op and emits
+  nothing.
+- `sequence` is only unique **per run**. Two runs may each have a sequence `1`; always pair the
+  cursor with `run_id`.
+
+**Concurrency contract:** a run transition claims the row with
+`UPDATE … WHERE id = :id AND status = :expected`. Two concurrent transitions (e.g. `complete` and
+`cancel`) resolve to exactly one winner; the loser gets **409 `illegal_transition`**. An approval
+decision is claimed the same way (`WHERE status = 'pending'`), so of a concurrent approve and reject
+exactly one is recorded and the other returns **409 `approval_not_pending`**.
+
+**Any database constraint violation that is not pre-checked still answers 409 `conflict` in the
+standard envelope** — never a 500 with a driver message.
 
 ### 5.3 Example — a full run
 
@@ -611,7 +636,7 @@ When no rule matches, the decision is `ask` — never `allow`.
 | SPEC section | Implemented here |
 |---|---|
 | §6 Phase 2.1 auth, argon2, RBAC | §3, §10 |
-| §6 Phase 2.2 database and migrations | every model in `backend/app/models/`, `backend/alembic/versions/0001_initial_schema.py` |
+| §6 Phase 2.2 database and migrations | every model in `apps/backend/app/models/`, `apps/backend/alembic/versions/` (`0001` schema, `0002` event cursor, `0003` message sequence) |
 | §6 Phase 2.5 agents and versioning | §4 |
 | §6 Phase 2.7 Tool Registry + Gateway | §6 |
 | §4.3 / §7 events, outbox, `sequence` | §5 |

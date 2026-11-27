@@ -98,3 +98,48 @@ response or an audit row (the audit writer redacts again on write).
 allow-list and returns `{"status": "not_fetched"}`; `GET /api/system/usage` returns `tokens: null` and
 `cost: null`; `selector-test` reports "live page not checked" when no page snapshot is supplied.
 All are recorded as Partial in `IMPLEMENTATION_STATUS.md`.
+
+---
+
+## TD-007 Atomic counter allocation for per-run event and per-chat message sequences
+
+**Context.** SPEC §7 requires `sequence` to be monotonic per run, and the cursor must never repeat an
+event. The inherited implementation read `runs.last_sequence` (or `MAX(messages.sequence)`) and then
+wrote the next value. Under two concurrent requests both read the same number; the event insert then
+failed the `uq_events_run_sequence` constraint and surfaced as an opaque 500, and two chat messages
+could share a sequence, making client ordering ambiguous.
+
+**Options.** (a) `SELECT … FOR UPDATE` on the parent row — portable, but it holds a row lock across
+the whole request and still needs a retry path; (b) allocate with one `UPDATE … RETURNING` on the
+parent counter and retry the child insert under a SAVEPOINT; (c) a database sequence per run — not
+portable to SQLite and unbounded in count.
+
+**Decision.** (b). `UPDATE runs SET last_sequence = last_sequence + 1 … RETURNING last_sequence`
+is serialised by the row lock, so the value is unique by construction. The child insert runs inside
+`session.begin_nested()` and is retried on `IntegrityError`, which also covers the "row does not exist
+yet" and "explicit sequence collides" edges. Messages get the same treatment backed by a unique
+`(conversation_id, sequence)` index.
+
+**Consequences.** The counter is a high-water mark: a reservation whose request rolls back is
+skipped, so sequences are strictly increasing but need not be gap-free — which is exactly what the
+`after_sequence` resume cursor needs. Loaded ORM instances are updated with
+`set_committed_value`, so serialising a response never triggers a lazy refresh inside the request.
+
+---
+
+## TD-008 Claiming a decision with `UPDATE … WHERE status = :expected`
+
+**Context.** An approval must be decided once (SPEC §1 step 7), and a run must follow the legal
+transition table (docs/API.md §5.2). Both were implemented as "read the row, check the state, then
+write". Two concurrent requests both observed `pending`/`running` and both succeeded: an approval
+could be recorded as approved *and* rejected, and a run could emit both `run.started` and
+`run.cancelled`.
+
+**Decision.** The expected current state is part of the `WHERE` clause of the `UPDATE`; the returned
+row (or the affected-row count) decides the winner, and zero rows means another request won, so the
+loser raises **409** (`approval_not_pending` / `illegal_transition`). The event and audit rows are
+therefore written by exactly one request.
+
+**Consequences.** Optimistic concurrency with no extra locks and no lost updates, and the invariants
+are testable without threads (`asyncio.gather` against the ASGI app reproduces both races). A
+repeated transition that is already in effect stays an idempotent no-op and emits no event.
