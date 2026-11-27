@@ -1,0 +1,24 @@
+# Dockerfile.frontend — NEXUS SPA build + nginx serving (docs/SPEC.md §10).
+#
+# Contract with the frontend slice (not yet opened): the root package.json
+# defines `build`, which emits static files to dist/ at the repo root. Until
+# that script exists, `docker compose build frontend` fails loudly — see
+# docs/DEPLOYMENT.md "Slice contracts".
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM nginx:1.27-alpine
+
+# Replaces the stock default.conf: listens on 3000, proxies /api/ and /ws/ to
+# the backend service, and falls back to index.html for SPA routes.
+COPY infrastructure/docker/frontend.nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html/
+
+EXPOSE 3000
