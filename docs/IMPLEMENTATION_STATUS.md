@@ -18,7 +18,7 @@ current environment.
 | Environment template | Complete | `.env.example` | `tests/test_docker_stack.py::test_env_example_documents_every_variable_used_by_the_compose_file` | Every variable documented, every secret empty |
 | Loopback-only exposure | Complete | `docker-compose.yml` | `tests/test_docker_stack.py::test_every_published_port_is_bound_to_the_loopback_interface` | Every published port is bound to `127.0.0.1` |
 | Layout-independent image builds | Complete | `infrastructure/docker/resolve_source.py` | `tests/test_docker_stack.py::test_resolver_*` | Supports `backend/` and `apps/backend/`, `apps/web/` and `integrations/browser-bridge/` |
-| Container smoke test | Complete | `.github/workflows/docker-stack.yml` | the workflow itself | Builds the images, starts the stack and checks the health endpoints on a runner with Docker |
+| Container smoke test | Complete | `.github/workflows/docker-stack.yml` | the workflow itself | Two jobs: a deterministic build from the fixtures (blocking) and the same smoke test with the merged application slices (informational) |
 | Local documentation | Complete | `docs/DEPLOYMENT.md` | — | Quick start, variables, security notes, design decisions, troubleshooting |
 | Building and starting the images in the development environment of this session | Blocked | — | — | Docker is not installed in that environment; the container pipeline is verified by the workflow instead |
 

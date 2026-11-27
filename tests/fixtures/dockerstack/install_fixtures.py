@@ -64,6 +64,15 @@ ROLES: tuple[tuple[str, str, str, object], ...] = (
     ("bridge", "bridge", "integrations/browser-bridge", bridge_present),
 )
 
+# Every directory a role can live in.  They are removed before a fixture is
+# installed with --force, so the fixture is the only application the resolver
+# can find.
+CANDIDATES: dict[str, tuple[str, ...]] = {
+    "backend": ("backend", "apps/backend"),
+    "frontend": ("apps/web", "web"),
+    "bridge": ("integrations/browser-bridge",),
+}
+
 
 def install(root: Path, force: bool = False) -> int:
     """Install the fixtures that are missing.  Returns the number installed."""
@@ -73,6 +82,11 @@ def install(root: Path, force: bool = False) -> int:
         if present(root) and not force:
             print(f"{role}: the real slice is present, keeping it")
             continue
+        if force:
+            for candidate in CANDIDATES[role]:
+                path = root / candidate
+                if path.is_dir():
+                    shutil.rmtree(path)
         destination = root / target
         source = FIXTURE_ROOT / fixture
         if destination.exists():
@@ -82,6 +96,17 @@ def install(root: Path, force: bool = False) -> int:
         installed += 1
         print(f"{role}: installed the fixture into {target}")
     return installed
+
+
+def check(root: Path) -> bool:
+    """Report whether every role has a real slice.  Prints the result."""
+
+    complete = True
+    for role, _fixture, _target, present in ROLES:
+        found = present(root)
+        complete = complete and found
+        print(f"{role}: {'real' if found else 'missing'}")
+    return complete
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -96,9 +121,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="install the fixtures even when the real slice is present",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="only report which roles have a real slice; exit 1 when one is missing",
+    )
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve()
+    if args.check:
+        return 0 if check(root) else 1
     install(root, force=args.force)
     return 0
 

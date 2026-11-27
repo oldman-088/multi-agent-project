@@ -42,6 +42,7 @@ FRONTEND_DOCKERFILE = DOCKER_DIR / "Dockerfile.frontend"
 BRIDGE_DOCKERFILE = DOCKER_DIR / "Dockerfile.bridge"
 NGINX_CONF = DOCKER_DIR / "frontend.nginx.conf"
 COMPOSE_SCHEMA = REPO_ROOT / "tests" / "data" / "compose-spec.json"
+FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "dockerstack"
 
 requires_yaml = pytest.mark.skipif(yaml is None, reason="PyYAML is not installed")
 requires_jsonschema = pytest.mark.skipif(
@@ -131,6 +132,18 @@ def load_resolver():
     module = importlib.util.module_from_spec(spec)
     # The module has to be registered before it is executed: dataclasses
     # resolve the annotations of the dataclass through sys.modules.
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_installer():
+    """Import `tests/fixtures/dockerstack/install_fixtures.py` as a module."""
+
+    path = FIXTURE_DIR / "install_fixtures.py"
+    spec = importlib.util.spec_from_file_location("nexus_install_fixtures", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
@@ -500,3 +513,50 @@ def test_resolver_cli_fails_when_the_role_cannot_be_resolved(resolver, tmp_path:
     exit_code = resolver.main(["bridge", "--root", str(tmp_path)])
 
     assert exit_code == 1
+
+
+# --------------------------------------------------------------------------- fixtures
+@pytest.fixture()
+def installer():
+    return load_installer()
+
+
+def test_installer_reports_the_missing_slices(installer, tmp_path: Path, capsys) -> None:
+    exit_code = installer.main(["--root", str(tmp_path), "--check"])
+
+    assert exit_code == 1
+    output = capsys.readouterr().out
+    assert "backend: missing" in output
+    assert "frontend: missing" in output
+    assert "bridge: missing" in output
+
+
+def test_installer_installs_the_missing_slices(installer, tmp_path: Path) -> None:
+    installed = installer.install(tmp_path)
+
+    assert installed == 3
+    assert (tmp_path / "backend" / "app" / "main.py").is_file()
+    assert (tmp_path / "apps" / "web" / "package.json").is_file()
+    assert (tmp_path / "integrations" / "browser-bridge" / "src" / "app.py").is_file()
+
+
+def test_installer_keeps_a_real_slice(installer, tmp_path: Path) -> None:
+    _write(tmp_path / "backend" / "app" / "main.py", "app = object()")
+
+    installed = installer.install(tmp_path)
+
+    assert installed == 2
+    assert (tmp_path / "backend" / "app" / "main.py").read_text(encoding="utf-8") == "app = object()"
+
+
+def test_installer_force_replaces_a_real_slice(installer, tmp_path: Path) -> None:
+    _write(tmp_path / "backend" / "app" / "main.py", "app = object()")
+    _write(tmp_path / "apps" / "backend" / "app" / "main.py", "app = object()")
+
+    installed = installer.install(tmp_path, force=True)
+
+    assert installed == 3
+    # The fixture is the only application the resolver can find afterwards.
+    assert not (tmp_path / "apps" / "backend").exists()
+    assert (tmp_path / "backend" / "app" / "main.py").is_file()
+    assert "FastAPI" in (tmp_path / "backend" / "app" / "main.py").read_text(encoding="utf-8")

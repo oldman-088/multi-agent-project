@@ -26,13 +26,14 @@ One entry per session. Newest first.
 * `.dockerignore` so no `.env`, cache or database ends up in an image.
 * `docs/DEPLOYMENT.md`: how to start the stack locally, the variables, the
   security posture, the design decisions and the troubleshooting table.
-* `tests/test_docker_stack.py`: 41 tests covering the compose file, the
-  images, the environment template and the resolver.
+* `tests/test_docker_stack.py`: 45 tests covering the compose file, the
+  images, the environment template, the resolver and the fixture installer.
 * `tests/fixtures/dockerstack/`: minimal stand-ins used by the container smoke
   test while the application slices are not merged yet.
 * `.github/workflows/docker-stack.yml`: validates the compose file, runs the
   static tests, builds the three images, starts the stack and checks the
-  health endpoints.
+  health endpoints.  A second, informational job repeats the smoke test with
+  the real application slices once they are merged; it never blocks a merge.
 
 ### Decisions
 
@@ -71,12 +72,13 @@ which are installed by the workflow; the two optional ones are guarded with
 
 | Command | Result |
 |---|---|
-| `python -m pytest tests/test_docker_stack.py -q` (Python 3.11, pytest 9.2, PyYAML 6.0.4, jsonschema 4.x) | **41 passed** |
+| `python -m pytest tests/test_docker_stack.py -q` (Python 3.11, pytest 9.2, PyYAML 6.0.4, jsonschema 4.x) | **45 passed** |
 | `python infrastructure/docker/resolve_source.py --root . --env-file ... backend\|frontend\|bridge` against the fixtures | resolved `backend.app.main:app`, `apps/web`, `integrations/browser-bridge/src` |
 | `python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000` (the command of the image) and `curl http://127.0.0.1:8000/health` | **HTTP 200** `{"status":"ok",...}` |
 | `python infrastructure/docker/bridge_entrypoint.py` (the command of the image) and `curl http://127.0.0.1:8790/health` | **HTTP 200** `{"status":"ok",...}` |
 | `node build.mjs` (the build of the frontend image) | wrote `dist/index.html` |
 | `docker compose config --quiet` | **not run here** — Docker is unavailable in this environment; it runs in the workflow |
+| `.github/workflows/docker-stack.yml` on the pull request (runner with Docker 26) | **success** — the three images built, the stack started and `/health` on the backend, `/health` on the bridge and `/healthz` on the frontend all answered |
 
 ### Known issues
 

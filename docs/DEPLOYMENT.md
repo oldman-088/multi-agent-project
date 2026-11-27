@@ -215,4 +215,8 @@ python -m pytest tests/test_docker_stack.py -q
 ```
 
 The container smoke test itself needs Docker and runs in
-`.github/workflows/docker-stack.yml`.
+`.github/workflows/docker-stack.yml`.  That workflow has two jobs: the first
+one builds the images from the minimal fixtures and always runs, the second
+one repeats the smoke test with the real application slices and is
+informational, so a failure in a slice that is being merged never blocks a
+merge of the project.
