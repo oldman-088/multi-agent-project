@@ -11,7 +11,9 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 PYTHON="${PYTHON:-python3}"
-if [[ -x ".venv/bin/python" ]]; then PYTHON=".venv/bin/python"; fi
+if [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then PYTHON="$REPO_ROOT/.venv/bin/python"
+elif [[ -x "$REPO_ROOT/apps/backend/.venv/bin/python" ]]; then PYTHON="$REPO_ROOT/apps/backend/.venv/bin/python"
+fi
 
 # `python -m <tool> --version` proves the tool is importable in this interpreter.
 as_module() {
@@ -34,20 +36,26 @@ run_module() {
 FAILED=0
 
 if as_module ruff --version; then
-  run_module "ruff check" ruff check backend tests
-  run_module "ruff format --check" ruff format --check backend/app tests
+  pushd "$REPO_ROOT/apps/backend" >/dev/null
+  run_module "ruff check" ruff check app tests
+    run_module "ruff format --check" ruff format --check app tests
+  popd >/dev/null
 else
   echo "⚠️  ruff not installed — skipping lint (install with: pip install -e '.[test]')"
 fi
 
 if as_module mypy --version; then
-  run_module "mypy (backend/app)" mypy backend/app
+  pushd "$REPO_ROOT/apps/backend" >/dev/null
+  run_module "mypy (apps/backend/app)" mypy app
+  popd >/dev/null
 else
   echo "⚠️  mypy not installed — skipping type check"
 fi
 
 if as_module pytest --version; then
+  pushd "$REPO_ROOT/apps/backend" >/dev/null
   run_module "pytest" pytest tests -q
+  popd >/dev/null
 else
   echo "❌ pytest not installed — the test gate cannot be skipped"
   FAILED=1
@@ -61,7 +69,9 @@ else
   echo "── migrations (SQLite only; set NEXUS_TEST_POSTGRES_URL for the PostgreSQL gate) ──"
 fi
 if as_module pytest --version; then
+  pushd "$REPO_ROOT/apps/backend" >/dev/null
   run_module "migrations" pytest tests/test_migrations.py -q
+  popd >/dev/null
 fi
 
 # Gates owned by phases that are not in this slice.

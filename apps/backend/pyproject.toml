@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-agent-os-backend"
+version = "0.1.0"
+description = "NEXUS AGENT OS backend (FastAPI modular monolith) — apps/backend per docs/SPEC.md §10"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "sqlalchemy[asyncio]>=2.0.30",
+  "alembic>=1.13",
+  "pydantic[email]>=2.6",
+  "pydantic-settings>=2.2",
+  "aiosqlite>=0.19",
+  "asyncpg>=0.29",
+  "psycopg[binary]>=3.1",
+  "argon2-cffi>=23.1",
+  "PyJWT>=2.8",
+  "cryptography>=42.0",
+  "PyYAML>=6.0",
+  "jsonschema>=4.21",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "httpx>=0.27",
+  "ruff>=0.5",
+  "mypy>=1.9",
+  "pgserver>=0.1",
+]
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+addopts = "-q"
+filterwarnings = [
+  "ignore::DeprecationWarning:passlib.*",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S", "C4", "SIM", "RET", "ARG", "PTH"]
+ignore = [
+  "S101",   # asserts are the point of tests
+  "B008",   # FastAPI Depends() in defaults is the documented pattern
+  "ARG001", # unused function args in FastAPI signatures/middleware
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106", "S107", "S311", "ARG002", "S104"]
+# Generated DDL lines are machine-written single statements; splitting them would
+# make the revision harder to audit, not easier.
+"alembic/versions/*" = ["E501", "ARG001", "B008"]
+"alembic/env.py" = ["ARG001", "B008"]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = ["."]
+plugins = ["pydantic.mypy"]
+warn_unused_ignores = false
+disallow_untyped_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["app.core.*", "app.auth.*", "app.services.*"]
+disallow_untyped_defs = true
