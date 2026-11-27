@@ -1,0 +1,15 @@
+# Dependencies & build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment & secrets (never commit)
+.env
+.env.*
+!.env.example
+
+# Local noise
+.DS_Store
+*.log
+*.local

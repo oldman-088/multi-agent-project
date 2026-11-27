@@ -1,0 +1,48 @@
+{
+  "app": {
+    "title": "NEXUS",
+    "tagline": "لوحة تشغيل الوكلاء"
+  },
+  "shell": {
+    "skipToContent": "تخطَّ إلى المحتوى",
+    "mainNav": "التنقل الرئيسي",
+    "languageSelect": "اختيار اللغة"
+  },
+  "nav": {
+    "home": "الصفحة الرئيسية"
+  },
+  "home": {
+    "heading": "مرحبًا بك في NEXUS",
+    "description": "قشرة التطبيق جاهزة. استخدم لوحة الأوامر للتنقل السريع.",
+    "languageLabel": "اللغة",
+    "directionLabel": "اتجاه الواجهة",
+    "themeLabel": "المظهر",
+    "rtl": "من اليمين إلى اليسار (RTL)",
+    "ltr": "من اليسار إلى اليمين (LTR)",
+    "openPaletteHint": "اضغط {shortcut} لفتح لوحة الأوامر"
+  },
+  "palette": {
+    "open": "فتح لوحة الأوامر",
+    "placeholder": "اكتب أمرًا للبحث…",
+    "empty": "لا توجد أوامر مطابقة",
+    "commands": {
+      "goHome": "الانتقال إلى الصفحة الرئيسية",
+      "toggleTheme": "تبديل المظهر",
+      "setLanguageAr": "تغيير اللغة إلى العربية",
+      "setLanguageEn": "تغيير اللغة إلى الإنجليزية",
+      "setLanguageFa": "تغيير اللغة إلى الفارسية"
+    }
+  },
+  "theme": {
+    "dark": "الوضع الليلي",
+    "light": "الوضع النهاري"
+  },
+  "languages": {
+    "ar": "العربية",
+    "en": "English",
+    "fa": "فارسی"
+  },
+  "dialog": {
+    "close": "إغلاق"
+  }
+}

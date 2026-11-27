@@ -1,0 +1,48 @@
+{
+  "app": {
+    "title": "NEXUS",
+    "tagline": "Agent operations console"
+  },
+  "shell": {
+    "skipToContent": "Skip to content",
+    "mainNav": "Main navigation",
+    "languageSelect": "Select language"
+  },
+  "nav": {
+    "home": "Home"
+  },
+  "home": {
+    "heading": "Welcome to NEXUS",
+    "description": "The app shell is ready. Use the command palette for quick navigation.",
+    "languageLabel": "Language",
+    "directionLabel": "Interface direction",
+    "themeLabel": "Theme",
+    "rtl": "Right to left (RTL)",
+    "ltr": "Left to right (LTR)",
+    "openPaletteHint": "Press {shortcut} to open the command palette"
+  },
+  "palette": {
+    "open": "Open command palette",
+    "placeholder": "Type a command to search…",
+    "empty": "No matching commands",
+    "commands": {
+      "goHome": "Go to home",
+      "toggleTheme": "Toggle theme",
+      "setLanguageAr": "Switch language to Arabic",
+      "setLanguageEn": "Switch language to English",
+      "setLanguageFa": "Switch language to Persian"
+    }
+  },
+  "theme": {
+    "dark": "Dark theme",
+    "light": "Light theme"
+  },
+  "languages": {
+    "ar": "العربية",
+    "en": "English",
+    "fa": "فارسی"
+  },
+  "dialog": {
+    "close": "Close"
+  }
+}
