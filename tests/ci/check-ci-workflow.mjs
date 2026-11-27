@@ -14,7 +14,9 @@
  *   - it runs the project check script (scripts/check.sh);
  *   - it has a TypeScript type-check job;
  *   - it has an E2E job that starts a local frontend + backend and runs
- *     Playwright against them.
+ *     Playwright against them;
+ *   - every slice-presence guard is a valid GitHub Actions expression placed on
+ *     the step that needs the slice (never on a job-level `if`).
  */
 
 import { readFileSync } from 'node:fs';
@@ -107,20 +109,41 @@ section('Safety', () => {
   check('does not commit a .env file', !/^\s*\.env\s*$/m.test(content));
 });
 
-section('Job guards (valid GitHub Actions expressions)', () => {
-  // A bare shell file test (`if: -f <file>`) is NOT a valid GitHub Actions
-  // expression: it makes the whole workflow fail to parse ("workflow file
-  // issue") and no jobs are created. Guards must use hashFiles(...).
+section('Presence guards (step-level only)', () => {
+  // Two constructs make GitHub reject the ENTIRE workflow file at parse time
+  // ("workflow file issue", zero jobs created):
+  //   1. a bare shell file test in `if:` (`if: -f <file>`) — not a valid
+  //      GitHub Actions expression at all;
+  //   2. `hashFiles(...)` in a JOB-level `if:` — `hashFiles()` is only
+  //      available in STEP-level conditions, so it must never appear on a
+  //      job `if:`. It IS valid on a step `if:`, after checkout.
+  // Both are caught here so the workflow can never silently produce a red
+  // run with no jobs.
   check(
     'does not use the invalid `if: -f <file>` shell test',
     !/^\s*if:\s*-f\s/m.test(content)
   );
-  check('guards presence with hashFiles expressions', (content.match(/hashFiles\(/g) || []).length >= 3);
+  // Job-level keys are indented 4 spaces in this file; step keys 8 spaces.
   check(
-    'guards every conditional job (typecheck, check, e2e)',
-    /typecheck:[\s\S]*?if:\s*\$\{\{\s*hashFiles\(/.test(content) &&
-      /check:[\s\S]*?if:\s*\$\{\{\s*hashFiles\(/.test(content) &&
-      /e2e:[\s\S]*?if:\s*\$\{\{\s*hashFiles\(/.test(content)
+    'does not use hashFiles in a job-level if (invalid, rejects the whole file)',
+    !/^ {4}if:.*hashFiles\(/m.test(content)
+  );
+  check(
+    'keeps hashFiles guards at the step level',
+    (/^ {8}if:.*hashFiles\(/m.test(content) &&
+      (content.match(/^ {8}if:.*hashFiles\(/gm) || []).length >= 3)
+  );
+  check(
+    'gates the TypeScript job on tsconfig.json at step level',
+    /^ {8}if:.*hashFiles\('tsconfig\.json'\)/m.test(content)
+  );
+  check(
+    'gates the check-script job on scripts/check.sh at step level',
+    /^ {8}if:.*hashFiles\('scripts\/check\.sh'\)/m.test(content)
+  );
+  check(
+    'gates the E2E job on a detect step output (no job-level if)',
+    has(content, 'steps.detect.outputs.frontend_present')
   );
 });
 

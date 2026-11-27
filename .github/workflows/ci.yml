@@ -12,14 +12,12 @@ name: ci
 # backend (uvicorn) and the frontend dev server itself, waits for both to be
 # healthy and then runs `playwright test`.
 #
-# Jobs are guarded with a `hashFiles(...)` presence check so the workflow
-# behaves correctly at every stage of the build: the TS job appears once the
-# frontend package exists, the check-script job once the backend quality gate
-# exists, and the E2E job once the Playwright suite exists. Jobs whose slice is
-# not present are skipped with a clear reason instead of failing on a missing
-# file. (`hashFiles` is the supported way to test for a file in a job `if`;
-# a bare shell `-f` test is not a valid GitHub Actions expression and makes the
-# whole workflow fail to parse.)
+# Presence of each slice is tested with a `hashFiles(...)` expression on the
+# STEP that needs the slice — never on the JOB `if`. `hashFiles()` is only
+# available in step-level conditions; putting it in a job-level `if:` makes
+# GitHub reject the ENTIRE workflow file at parse time ("workflow file issue",
+# zero jobs created). The E2E job instead runs a `detect` step (after checkout,
+# where file tests are valid) and gates its work on the boolean outputs.
 
 on:
   push:
@@ -29,10 +27,12 @@ on:
       - "tests/ci/**"
       - "tests/e2e/**"
       - "frontend/**"
+      - "backend/**"
       - "package.json"
       - "package-lock.json"
       - "playwright.config.ts"
       - "tsconfig.json"
+      - "pyproject.toml"
       - "scripts/**"
   pull_request:
     paths:
@@ -40,10 +40,12 @@ on:
       - "tests/ci/**"
       - "tests/e2e/**"
       - "frontend/**"
+      - "backend/**"
       - "package.json"
       - "package-lock.json"
       - "playwright.config.ts"
       - "tsconfig.json"
+      - "pyproject.toml"
       - "scripts/**"
   workflow_dispatch:
 
@@ -70,12 +72,13 @@ jobs:
       - name: Validate the workflow definition
         run: node tests/ci/check-ci-workflow.mjs
 
-  # TypeScript gate.
+  # TypeScript gate. Guarded at STEP level on the TypeScript project file:
+  # `tsc --noEmit` reads tsconfig.json, so the job only does work when a TS
+  # project is actually present.
   typecheck:
     name: TypeScript checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: ${{ hashFiles('package.json') != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -83,8 +86,10 @@ jobs:
           node-version: "20"
           cache: npm
       - name: Install dependencies
+        if: ${{ hashFiles('tsconfig.json') != '' }}
         run: npm ci
       - name: Type check
+        if: ${{ hashFiles('tsconfig.json') != '' }}
         run: npx tsc --noEmit
 
   # The project check script (docs/SPEC.md §9): ruff + mypy + pytest + Alembic.
@@ -93,7 +98,6 @@ jobs:
     name: Check script (quality gate)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: ${{ hashFiles('scripts/check.sh') != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -101,20 +105,26 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install backend dependencies
+        if: ${{ hashFiles('scripts/check.sh') != '' }}
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[test]"
       - name: Run the project check script
+        if: ${{ hashFiles('scripts/check.sh') != '' }}
         run: bash scripts/check.sh
 
   # End-to-end gate: starts the backend and the frontend locally, waits for both
   # to be healthy, then runs the Playwright usage-journey suite against them.
+  #
+  # A `detect` step (after checkout, where file tests are valid) reports which
+  # slices are present; each following step is gated on that. When the frontend
+  # slice is not implemented yet, the job skips cleanly instead of failing on a
+  # missing dev server — the check is green, with a clear reason.
   e2e:
     name: E2E (local frontend + backend)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [typecheck]
-    if: ${{ hashFiles('playwright.config.ts') != '' }}
     env:
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
       API_BASE_URL: http://127.0.0.1:8000
@@ -135,17 +145,44 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install dependencies
+
+      - name: Detect which slices are present
+        id: detect
         run: |
-          npm ci
+          set -euo pipefail
+          frontend=false
+          backend=false
+          if [[ -f package.json ]] &&
+            node -e "const p=require('./package.json');process.exit(p.scripts&&(p.scripts['start:frontend']||p.scripts.dev)?0:1)" 2>/dev/null; then
+            frontend=true
+          fi
+          if [[ -f scripts/check.sh ]]; then
+            backend=true
+          fi
+          echo "frontend_present=${frontend}" >> "$GITHUB_OUTPUT"
+          echo "backend_present=${backend}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Node dependencies
+        if: ${{ steps.detect.outputs.frontend_present == 'true' }}
+        run: npm ci
+
+      - name: Install backend dependencies
+        if: ${{ steps.detect.outputs.backend_present == 'true' }}
+        run: |
           python -m pip install --upgrade pip
           pip install -e ".[test]"
+
       - name: Install Playwright browsers
+        if: ${{ steps.detect.outputs.frontend_present == 'true' }}
         run: npx playwright install --with-deps chromium
+
       - name: Prepare the backend database
+        if: ${{ steps.detect.outputs.backend_present == 'true' }}
         working-directory: backend
         run: alembic upgrade head
+
       - name: Start the local stack and run E2E
+        if: ${{ steps.detect.outputs.frontend_present == 'true' }}
         run: |
           set -euo pipefail
 
@@ -160,7 +197,7 @@ jobs:
           }
           trap cleanup EXIT
 
-          # --- Backend (FastAPI) -------------------------------------------
+          # --- Backend (FastAPI) -----------------------------------------
           if [[ -f backend/app/main.py ]]; then
             echo ":: Starting backend on ${API}"
             uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 \
@@ -170,7 +207,7 @@ jobs:
             echo ":: Backend slice not present, skipping backend start"
           fi
 
-          # --- Frontend dev server (provided by the frontend slice) --------
+          # --- Frontend dev server (provided by the frontend slice) -------
           # Prefer an explicit start:frontend script, fall back to `dev`.
           frontend_script=""
           if node -e "const p=require('./package.json');process.exit(p.scripts&&p.scripts['start:frontend']?0:1)" 2>/dev/null; then
