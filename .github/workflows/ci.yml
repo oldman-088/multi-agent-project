@@ -159,7 +159,7 @@ jobs:
           echo "backend_present=${backend}" >> "$GITHUB_OUTPUT"
 
       - name: Install Node dependencies
-        if: ${{ steps.detect.outputs.frontend_present == 'true' }}
+        if: ${{ steps.detect.outputs.frontend_present == 'true' || steps.detect.outputs.backend_present == 'true' }}
         run: npm ci
 
       - name: Install backend dependencies
@@ -177,6 +177,50 @@ jobs:
         working-directory: backend
         run: alembic upgrade head
 
+      # Backend-only mode (the current repository state): start uvicorn and
+      # run the API-level SPEC conformance journeys against it. The API
+      # spec needs no browser, so this works without `playwright install`.
+      - name: Run API conformance E2E against the local backend
+        if: ${{ steps.detect.outputs.backend_present == 'true' && steps.detect.outputs.frontend_present != 'true' }}
+        run: |
+          set -euo pipefail
+
+          API="${API_BASE_URL:-http://127.0.0.1:8000}"
+          backend_pid=""
+
+          cleanup() {
+            [[ -n "$backend_pid" ]] && kill "$backend_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          echo ":: Starting backend on ${API}"
+          uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 \
+            >/tmp/nexus-backend.log 2>&1 &
+          backend_pid=$!
+
+          wait_http() {
+            local url="$1" name="$2" i
+            for i in $(seq 1 60); do
+              if curl -fsS -o /dev/null "$url" 2>/dev/null; then
+                echo ":: ${name} is ready at ${url}"
+                return 0
+              fi
+              sleep 1
+            done
+            echo "ERROR: ${name} did not become ready at ${url}"
+            echo "::group::${name} log"
+            [[ -f /tmp/nexus-backend.log ]] && tail -n 40 /tmp/nexus-backend.log
+            echo "::endgroup::"
+            return 1
+          }
+          wait_http "${API}/api/health" "backend"
+
+          echo ":: Running API conformance E2E against ${API}"
+          npx playwright test tests/e2e/spec_conformance.spec.ts
+
+      # Full-stack mode (once the frontend slice lands): start backend +
+      # frontend dev server and run the complete Playwright usage-journey
+      # suite against them.
       - name: Start the local stack and run E2E
         if: ${{ steps.detect.outputs.frontend_present == 'true' }}
         run: |
