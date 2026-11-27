@@ -216,6 +216,11 @@ async def list_events(
     limit: Annotated[int, Query(ge=1, le=1000)] = 200,
 ) -> list[EventOut]:
     auth.require("events:read")
+    if run_id is not None:
+        # An id from another organization is indistinguishable from an unknown one:
+        # answer 404 instead of an empty 200, so the cursor cannot be used to probe
+        # for the existence of another tenant's runs.
+        await run_service.get_run(session, auth.organization_id, run_id)
     rows = await event_service.list_events(
         session,
         organization_id=auth.organization_id,

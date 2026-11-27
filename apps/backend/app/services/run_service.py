@@ -151,6 +151,7 @@ async def transition(
     new_status: RunStatus,
     actor_id: str | None = None,
     error: str | None = None,
+    extra_payload: dict | None = None,
 ) -> Run:
     """Move a run to ``new_status`` and emit the matching event."""
     current = RunStatus(run.status)
@@ -183,9 +184,7 @@ async def transition(
         .execution_options(synchronize_session=False)
     )
     if claimed is None:
-        raise ConflictError(
-            "The run was changed by another request", code="illegal_transition"
-        )
+        raise ConflictError("The run was changed by another request", code="illegal_transition")
 
     # Mirror the claimed row onto the loaded instance without marking it dirty, so
     # the response reflects the update and no second UPDATE is emitted.
@@ -206,6 +205,14 @@ async def transition(
         RunStatus.CANCELLED: "run.cancelled",
     }
     event_type = event_map.get(new_status)
+    # Resuming a paused/waiting run is ``run.resumed``, not a second ``run.started``.
+    # Exactly one event per state change keeps the sequence a faithful history.
+    if new_status is RunStatus.RUNNING and current in {
+        RunStatus.PAUSED,
+        RunStatus.WAITING_FOR_USER,
+        RunStatus.RESUME_AVAILABLE,
+    }:
+        event_type = "run.resumed"
     if event_type:
         await event_service.append_event(
             session,
@@ -213,7 +220,12 @@ async def transition(
             run_id=run.id,
             agent_id=run.agent_id,
             event_type=event_type,
-            payload={"from": current.value, "to": new_status.value, "error": error},
+            payload={
+                "from": current.value,
+                "to": new_status.value,
+                "error": error,
+                **(extra_payload or {}),
+            },
         )
     await audit.record(
         session,
@@ -253,16 +265,15 @@ async def resume_run(
     }:
         # Allowed without a checkpoint: nothing had been persisted yet.
         checkpoint = None
-    run = await transition(session, run=run, new_status=RunStatus.RUNNING, actor_id=actor_id)
-    await event_service.append_event(
+    # ``transition`` emits ``run.resumed`` for this from-state and carries where the
+    # run restarts from, so the run never gets both ``run.started`` and ``run.resumed``.
+    return await transition(
         session,
-        organization_id=organization_id,
-        run_id=run.id,
-        agent_id=run.agent_id,
-        event_type="run.resumed",
-        payload={"from_checkpoint": checkpoint.step if checkpoint else None},
+        run=run,
+        new_status=RunStatus.RUNNING,
+        actor_id=actor_id,
+        extra_payload={"from_checkpoint": checkpoint.step if checkpoint else None},
     )
-    return run
 
 
 async def create_checkpoint(

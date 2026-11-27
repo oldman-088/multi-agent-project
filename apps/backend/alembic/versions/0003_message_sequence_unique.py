@@ -61,8 +61,7 @@ WHERE id IN (
 """
 
 CREATE_INDEX = (
-    "CREATE UNIQUE INDEX uq_messages_conversation_sequence "
-    "ON messages (conversation_id, sequence)"
+    "CREATE UNIQUE INDEX uq_messages_conversation_sequence ON messages (conversation_id, sequence)"
 )
 DROP_INDEX = "DROP INDEX IF EXISTS uq_messages_conversation_sequence"
 

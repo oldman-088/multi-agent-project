@@ -9,6 +9,7 @@ Revision ID: 0001_initial
 Revises:
 Create Date: 2026-11-27
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -23,7 +24,7 @@ depends_on: str | Sequence[str] | None = None
 #: Ordered DDL: parents before children. Plain SQL keeps this revision valid on
 #: both supported backends without dialect branching.
 STATEMENTS: list[str] = [
-    r'''CREATE TABLE organizations (
+    r"""CREATE TABLE organizations (
 	name VARCHAR(160) NOT NULL, 
 	slug VARCHAR(80) NOT NULL, 
 	autonomy_level VARCHAR(1) NOT NULL, 
@@ -32,17 +33,17 @@ STATEMENTS: list[str] = [
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	CONSTRAINT pk_organizations PRIMARY KEY (id)
-)''',
-    r'''CREATE UNIQUE INDEX ix_organizations_slug ON organizations (slug)''',
-    r'''CREATE TABLE permissions (
+)""",
+    r"""CREATE UNIQUE INDEX ix_organizations_slug ON organizations (slug)""",
+    r"""CREATE TABLE permissions (
 	code VARCHAR(64) NOT NULL, 
 	description VARCHAR(255) NOT NULL, 
 	category VARCHAR(32) NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	CONSTRAINT pk_permissions PRIMARY KEY (code)
-)''',
-    r'''CREATE TABLE users (
+)""",
+    r"""CREATE TABLE users (
 	email VARCHAR(320) NOT NULL, 
 	display_name VARCHAR(120) NOT NULL, 
 	password_hash VARCHAR(255) NOT NULL, 
@@ -57,9 +58,9 @@ STATEMENTS: list[str] = [
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	CONSTRAINT pk_users PRIMARY KEY (id)
-)''',
-    r'''CREATE UNIQUE INDEX ix_users_email ON users (email)''',
-    r'''CREATE TABLE adapters (
+)""",
+    r"""CREATE UNIQUE INDEX ix_users_email ON users (email)""",
+    r"""CREATE TABLE adapters (
 	organization_id VARCHAR(64) NOT NULL, 
 	provider_slug VARCHAR(80) NOT NULL, 
 	version INTEGER NOT NULL, 
@@ -72,9 +73,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_adapters PRIMARY KEY (id), 
 	CONSTRAINT uq_adapters_version UNIQUE (organization_id, provider_slug, version), 
 	CONSTRAINT fk_adapters_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_adapters_org ON adapters (organization_id)''',
-    r'''CREATE TABLE audit_logs (
+)""",
+    r"""CREATE INDEX ix_adapters_org ON adapters (organization_id)""",
+    r"""CREATE TABLE audit_logs (
 	id VARCHAR(64) NOT NULL, 
 	organization_id VARCHAR(64), 
 	actor_id VARCHAR(64), 
@@ -91,11 +92,11 @@ STATEMENTS: list[str] = [
 	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	CONSTRAINT pk_audit_logs PRIMARY KEY (id), 
 	CONSTRAINT fk_audit_logs_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_audit_logs_action ON audit_logs (action)''',
-    r'''CREATE INDEX ix_audit_logs_actor ON audit_logs (actor_id)''',
-    r'''CREATE INDEX ix_audit_logs_org_created ON audit_logs (organization_id, created_at)''',
-    r'''CREATE TABLE browser_devices (
+)""",
+    r"""CREATE INDEX ix_audit_logs_action ON audit_logs (action)""",
+    r"""CREATE INDEX ix_audit_logs_actor ON audit_logs (actor_id)""",
+    r"""CREATE INDEX ix_audit_logs_org_created ON audit_logs (organization_id, created_at)""",
+    r"""CREATE TABLE browser_devices (
 	organization_id VARCHAR(64) NOT NULL, 
 	label VARCHAR(120) NOT NULL, 
 	credential_hash VARCHAR(64) NOT NULL, 
@@ -107,9 +108,9 @@ STATEMENTS: list[str] = [
 	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	CONSTRAINT pk_browser_devices PRIMARY KEY (id), 
 	CONSTRAINT fk_browser_devices_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_browser_devices_org ON browser_devices (organization_id)''',
-    r'''CREATE TABLE bus_messages (
+)""",
+    r"""CREATE INDEX ix_browser_devices_org ON browser_devices (organization_id)""",
+    r"""CREATE TABLE bus_messages (
 	organization_id VARCHAR(64) NOT NULL, 
 	channel VARCHAR(120) NOT NULL, 
 	kind VARCHAR(16) NOT NULL, 
@@ -126,10 +127,10 @@ STATEMENTS: list[str] = [
 	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	CONSTRAINT pk_bus_messages PRIMARY KEY (id), 
 	CONSTRAINT fk_bus_messages_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_bus_messages_correlation ON bus_messages (correlation_id)''',
-    r'''CREATE INDEX ix_bus_messages_org ON bus_messages (organization_id)''',
-    r'''CREATE TABLE credentials (
+)""",
+    r"""CREATE INDEX ix_bus_messages_correlation ON bus_messages (correlation_id)""",
+    r"""CREATE INDEX ix_bus_messages_org ON bus_messages (organization_id)""",
+    r"""CREATE TABLE credentials (
 	organization_id VARCHAR(64) NOT NULL, 
 	name VARCHAR(120) NOT NULL, 
 	kind VARCHAR(32) NOT NULL, 
@@ -142,9 +143,9 @@ STATEMENTS: list[str] = [
 	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	CONSTRAINT pk_credentials PRIMARY KEY (id), 
 	CONSTRAINT fk_credentials_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_credentials_org ON credentials (organization_id)''',
-    r'''CREATE TABLE organization_members (
+)""",
+    r"""CREATE INDEX ix_credentials_org ON credentials (organization_id)""",
+    r"""CREATE TABLE organization_members (
 	organization_id VARCHAR(64) NOT NULL, 
 	user_id VARCHAR(64) NOT NULL, 
 	role VARCHAR(48) NOT NULL, 
@@ -154,9 +155,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT uq_org_members_org_user UNIQUE (organization_id, user_id), 
 	CONSTRAINT fk_organization_members_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_organization_members_user_id_users FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_org_members_user ON organization_members (user_id)''',
-    r'''CREATE TABLE providers (
+)""",
+    r"""CREATE INDEX ix_org_members_user ON organization_members (user_id)""",
+    r"""CREATE TABLE providers (
 	organization_id VARCHAR(64) NOT NULL, 
 	slug VARCHAR(80) NOT NULL, 
 	display_name VARCHAR(120) NOT NULL, 
@@ -170,8 +171,8 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_providers PRIMARY KEY (id), 
 	CONSTRAINT uq_providers_org_slug UNIQUE (organization_id, slug), 
 	CONSTRAINT fk_providers_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE
-)''',
-    r'''CREATE TABLE refresh_tokens (
+)""",
+    r"""CREATE TABLE refresh_tokens (
 	id VARCHAR(64) NOT NULL, 
 	user_id VARCHAR(64) NOT NULL, 
 	token_hash VARCHAR(64) NOT NULL, 
@@ -183,9 +184,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_refresh_tokens PRIMARY KEY (id), 
 	CONSTRAINT fk_refresh_tokens_user_id_users FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE, 
 	CONSTRAINT uq_refresh_tokens_token_hash UNIQUE (token_hash)
-)''',
-    r'''CREATE INDEX ix_refresh_tokens_user ON refresh_tokens (user_id)''',
-    r'''CREATE TABLE role_grants (
+)""",
+    r"""CREATE INDEX ix_refresh_tokens_user ON refresh_tokens (user_id)""",
+    r"""CREATE TABLE role_grants (
 	organization_id VARCHAR(64) NOT NULL, 
 	role VARCHAR(48) NOT NULL, 
 	permission_code VARCHAR(64) NOT NULL, 
@@ -195,8 +196,8 @@ STATEMENTS: list[str] = [
 	CONSTRAINT uq_role_grants_spec UNIQUE (organization_id, role, permission_code), 
 	CONSTRAINT fk_role_grants_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_role_grants_permission_code_permissions FOREIGN KEY(permission_code) REFERENCES permissions (code) ON DELETE CASCADE
-)''',
-    r'''CREATE TABLE tools (
+)""",
+    r"""CREATE TABLE tools (
 	id VARCHAR(64) NOT NULL, 
 	organization_id VARCHAR(64) NOT NULL, 
 	slug VARCHAR(80) NOT NULL, 
@@ -211,8 +212,8 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_tools PRIMARY KEY (id), 
 	CONSTRAINT uq_tools_org_slug UNIQUE (organization_id, slug), 
 	CONSTRAINT fk_tools_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE
-)''',
-    r'''CREATE TABLE browser_profiles (
+)""",
+    r"""CREATE TABLE browser_profiles (
 	organization_id VARCHAR(64) NOT NULL, 
 	device_id VARCHAR(64) NOT NULL, 
 	label VARCHAR(120) NOT NULL, 
@@ -225,9 +226,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_browser_profiles PRIMARY KEY (id), 
 	CONSTRAINT fk_browser_profiles_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_browser_profiles_device_id_browser_devices FOREIGN KEY(device_id) REFERENCES browser_devices (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_browser_profiles_org ON browser_profiles (organization_id)''',
-    r'''CREATE TABLE provider_connections (
+)""",
+    r"""CREATE INDEX ix_browser_profiles_org ON browser_profiles (organization_id)""",
+    r"""CREATE TABLE provider_connections (
 	organization_id VARCHAR(64) NOT NULL, 
 	provider_id VARCHAR(64) NOT NULL, 
 	name VARCHAR(120) NOT NULL, 
@@ -248,9 +249,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT fk_provider_connections_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_provider_connections_provider_id_providers FOREIGN KEY(provider_id) REFERENCES providers (id) ON DELETE RESTRICT, 
 	CONSTRAINT fk_provider_connections_credential_id_credentials FOREIGN KEY(credential_id) REFERENCES credentials (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_provider_connections_org ON provider_connections (organization_id)''',
-    r'''CREATE TABLE agents (
+)""",
+    r"""CREATE INDEX ix_provider_connections_org ON provider_connections (organization_id)""",
+    r"""CREATE TABLE agents (
 	organization_id VARCHAR(64) NOT NULL, 
 	slug VARCHAR(80) NOT NULL, 
 	name VARCHAR(120) NOT NULL, 
@@ -270,9 +271,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT uq_agents_org_slug UNIQUE (organization_id, slug), 
 	CONSTRAINT fk_agents_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_agents_connection_id_provider_connections FOREIGN KEY(connection_id) REFERENCES provider_connections (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_agents_org ON agents (organization_id)''',
-    r'''CREATE TABLE connection_capabilities (
+)""",
+    r"""CREATE INDEX ix_agents_org ON agents (organization_id)""",
+    r"""CREATE TABLE connection_capabilities (
 	connection_id VARCHAR(64) NOT NULL, 
 	capability VARCHAR(64) NOT NULL, 
 	status VARCHAR(48) NOT NULL, 
@@ -281,8 +282,8 @@ STATEMENTS: list[str] = [
 	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	CONSTRAINT pk_connection_capabilities PRIMARY KEY (connection_id, capability), 
 	CONSTRAINT fk_connection_capabilities_connection_id_provider_connections FOREIGN KEY(connection_id) REFERENCES provider_connections (id) ON DELETE CASCADE
-)''',
-    r'''CREATE TABLE agent_versions (
+)""",
+    r"""CREATE TABLE agent_versions (
 	id VARCHAR(64) NOT NULL, 
 	organization_id VARCHAR(64) NOT NULL, 
 	agent_id VARCHAR(64) NOT NULL, 
@@ -306,9 +307,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT uq_agent_versions_agent_version UNIQUE (agent_id, version), 
 	CONSTRAINT fk_agent_versions_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_agent_versions_agent_id_agents FOREIGN KEY(agent_id) REFERENCES agents (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_agent_versions_agent ON agent_versions (agent_id)''',
-    r'''CREATE TABLE browser_sessions (
+)""",
+    r"""CREATE INDEX ix_agent_versions_agent ON agent_versions (agent_id)""",
+    r"""CREATE TABLE browser_sessions (
 	organization_id VARCHAR(64) NOT NULL, 
 	profile_id VARCHAR(64) NOT NULL, 
 	provider_slug VARCHAR(80) NOT NULL, 
@@ -327,10 +328,10 @@ STATEMENTS: list[str] = [
 	CONSTRAINT fk_browser_sessions_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_browser_sessions_profile_id_browser_profiles FOREIGN KEY(profile_id) REFERENCES browser_profiles (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_browser_sessions_granted_agent_id_agents FOREIGN KEY(granted_agent_id) REFERENCES agents (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_browser_sessions_org ON browser_sessions (organization_id)''',
-    r'''CREATE INDEX ix_browser_sessions_profile ON browser_sessions (profile_id)''',
-    r'''CREATE TABLE conversations (
+)""",
+    r"""CREATE INDEX ix_browser_sessions_org ON browser_sessions (organization_id)""",
+    r"""CREATE INDEX ix_browser_sessions_profile ON browser_sessions (profile_id)""",
+    r"""CREATE TABLE conversations (
 	organization_id VARCHAR(64) NOT NULL, 
 	agent_id VARCHAR(64) NOT NULL, 
 	title VARCHAR(200) NOT NULL, 
@@ -342,10 +343,10 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_conversations PRIMARY KEY (id), 
 	CONSTRAINT fk_conversations_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_conversations_agent_id_agents FOREIGN KEY(agent_id) REFERENCES agents (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_conversations_agent ON conversations (agent_id)''',
-    r'''CREATE INDEX ix_conversations_org ON conversations (organization_id)''',
-    r'''CREATE TABLE schedules (
+)""",
+    r"""CREATE INDEX ix_conversations_agent ON conversations (agent_id)""",
+    r"""CREATE INDEX ix_conversations_org ON conversations (organization_id)""",
+    r"""CREATE TABLE schedules (
 	organization_id VARCHAR(64) NOT NULL, 
 	agent_id VARCHAR(64), 
 	name VARCHAR(160) NOT NULL, 
@@ -364,9 +365,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_schedules PRIMARY KEY (id), 
 	CONSTRAINT fk_schedules_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_schedules_agent_id_agents FOREIGN KEY(agent_id) REFERENCES agents (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_schedules_org ON schedules (organization_id)''',
-    r'''CREATE TABLE teams (
+)""",
+    r"""CREATE INDEX ix_schedules_org ON schedules (organization_id)""",
+    r"""CREATE TABLE teams (
 	organization_id VARCHAR(64) NOT NULL, 
 	slug VARCHAR(80) NOT NULL, 
 	name VARCHAR(120) NOT NULL, 
@@ -381,9 +382,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT uq_teams_org_slug UNIQUE (organization_id, slug), 
 	CONSTRAINT fk_teams_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_teams_manager_agent_id_agents FOREIGN KEY(manager_agent_id) REFERENCES agents (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_teams_org ON teams (organization_id)''',
-    r'''CREATE TABLE missions (
+)""",
+    r"""CREATE INDEX ix_teams_org ON teams (organization_id)""",
+    r"""CREATE TABLE missions (
 	organization_id VARCHAR(64) NOT NULL, 
 	team_id VARCHAR(64), 
 	title VARCHAR(200) NOT NULL, 
@@ -405,9 +406,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT fk_missions_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_missions_team_id_teams FOREIGN KEY(team_id) REFERENCES teams (id) ON DELETE SET NULL, 
 	CONSTRAINT fk_missions_parent_mission_id_missions FOREIGN KEY(parent_mission_id) REFERENCES missions (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_missions_org ON missions (organization_id)''',
-    r'''CREATE TABLE runs (
+)""",
+    r"""CREATE INDEX ix_missions_org ON missions (organization_id)""",
+    r"""CREATE TABLE runs (
 	organization_id VARCHAR(64) NOT NULL, 
 	agent_id VARCHAR(64) NOT NULL, 
 	agent_version_id VARCHAR(64), 
@@ -433,11 +434,11 @@ STATEMENTS: list[str] = [
 	CONSTRAINT fk_runs_agent_version_id_agent_versions FOREIGN KEY(agent_version_id) REFERENCES agent_versions (id) ON DELETE SET NULL, 
 	CONSTRAINT fk_runs_conversation_id_conversations FOREIGN KEY(conversation_id) REFERENCES conversations (id) ON DELETE SET NULL, 
 	CONSTRAINT fk_runs_connection_id_provider_connections FOREIGN KEY(connection_id) REFERENCES provider_connections (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_runs_agent ON runs (agent_id)''',
-    r'''CREATE INDEX ix_runs_org ON runs (organization_id)''',
-    r'''CREATE INDEX ix_runs_status ON runs (status)''',
-    r'''CREATE TABLE team_members (
+)""",
+    r"""CREATE INDEX ix_runs_agent ON runs (agent_id)""",
+    r"""CREATE INDEX ix_runs_org ON runs (organization_id)""",
+    r"""CREATE INDEX ix_runs_status ON runs (status)""",
+    r"""CREATE TABLE team_members (
 	team_id VARCHAR(64) NOT NULL, 
 	agent_id VARCHAR(64) NOT NULL, 
 	member_role VARCHAR(32) NOT NULL, 
@@ -448,8 +449,8 @@ STATEMENTS: list[str] = [
 	CONSTRAINT uq_team_members_pair UNIQUE (team_id, agent_id), 
 	CONSTRAINT fk_team_members_team_id_teams FOREIGN KEY(team_id) REFERENCES teams (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_team_members_agent_id_agents FOREIGN KEY(agent_id) REFERENCES agents (id) ON DELETE CASCADE
-)''',
-    r'''CREATE TABLE approvals (
+)""",
+    r"""CREATE TABLE approvals (
 	organization_id VARCHAR(64) NOT NULL, 
 	kind VARCHAR(24) NOT NULL, 
 	status VARCHAR(16) NOT NULL, 
@@ -468,10 +469,10 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_approvals PRIMARY KEY (id), 
 	CONSTRAINT fk_approvals_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_approvals_run_id_runs FOREIGN KEY(run_id) REFERENCES runs (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_approvals_org_status ON approvals (organization_id, status)''',
-    r'''CREATE INDEX ix_approvals_run ON approvals (run_id)''',
-    r'''CREATE TABLE checkpoints (
+)""",
+    r"""CREATE INDEX ix_approvals_org_status ON approvals (organization_id, status)""",
+    r"""CREATE INDEX ix_approvals_run ON approvals (run_id)""",
+    r"""CREATE TABLE checkpoints (
 	id VARCHAR(64) NOT NULL, 
 	organization_id VARCHAR(64) NOT NULL, 
 	run_id VARCHAR(64) NOT NULL, 
@@ -485,9 +486,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT uq_checkpoints_run_step UNIQUE (run_id, step), 
 	CONSTRAINT fk_checkpoints_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_checkpoints_run_id_runs FOREIGN KEY(run_id) REFERENCES runs (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_checkpoints_run ON checkpoints (run_id)''',
-    r'''CREATE TABLE events (
+)""",
+    r"""CREATE INDEX ix_checkpoints_run ON checkpoints (run_id)""",
+    r"""CREATE TABLE events (
 	id VARCHAR(64) NOT NULL, 
 	event_version INTEGER NOT NULL, 
 	organization_id VARCHAR(64) NOT NULL, 
@@ -505,11 +506,11 @@ STATEMENTS: list[str] = [
 	CONSTRAINT uq_events_run_sequence UNIQUE (run_id, sequence), 
 	CONSTRAINT fk_events_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_events_run_id_runs FOREIGN KEY(run_id) REFERENCES runs (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_events_org_created ON events (organization_id, created_at)''',
-    r'''CREATE INDEX ix_events_run_seq ON events (run_id, sequence)''',
-    r'''CREATE INDEX ix_events_type ON events (event_type)''',
-    r'''CREATE TABLE messages (
+)""",
+    r"""CREATE INDEX ix_events_org_created ON events (organization_id, created_at)""",
+    r"""CREATE INDEX ix_events_run_seq ON events (run_id, sequence)""",
+    r"""CREATE INDEX ix_events_type ON events (event_type)""",
+    r"""CREATE TABLE messages (
 	organization_id VARCHAR(64) NOT NULL, 
 	conversation_id VARCHAR(64) NOT NULL, 
 	run_id VARCHAR(64), 
@@ -526,9 +527,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT fk_messages_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_messages_conversation_id_conversations FOREIGN KEY(conversation_id) REFERENCES conversations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_messages_run_id_runs FOREIGN KEY(run_id) REFERENCES runs (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_messages_conversation ON messages (conversation_id, created_at)''',
-    r'''CREATE TABLE tasks (
+)""",
+    r"""CREATE INDEX ix_messages_conversation ON messages (conversation_id, created_at)""",
+    r"""CREATE TABLE tasks (
 	organization_id VARCHAR(64) NOT NULL, 
 	mission_id VARCHAR(64) NOT NULL, 
 	title VARCHAR(200) NOT NULL, 
@@ -555,10 +556,10 @@ STATEMENTS: list[str] = [
 	CONSTRAINT fk_tasks_mission_id_missions FOREIGN KEY(mission_id) REFERENCES missions (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_tasks_assignee_agent_id_agents FOREIGN KEY(assignee_agent_id) REFERENCES agents (id) ON DELETE SET NULL, 
 	CONSTRAINT fk_tasks_run_id_runs FOREIGN KEY(run_id) REFERENCES runs (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_tasks_mission ON tasks (mission_id)''',
-    r'''CREATE INDEX ix_tasks_status ON tasks (status)''',
-    r'''CREATE TABLE tool_invocations (
+)""",
+    r"""CREATE INDEX ix_tasks_mission ON tasks (mission_id)""",
+    r"""CREATE INDEX ix_tasks_status ON tasks (status)""",
+    r"""CREATE TABLE tool_invocations (
 	organization_id VARCHAR(64) NOT NULL, 
 	run_id VARCHAR(64), 
 	agent_id VARCHAR(64), 
@@ -574,10 +575,10 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_tool_invocations PRIMARY KEY (id), 
 	CONSTRAINT fk_tool_invocations_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_tool_invocations_run_id_runs FOREIGN KEY(run_id) REFERENCES runs (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_tool_invocations_org ON tool_invocations (organization_id)''',
-    r'''CREATE INDEX ix_tool_invocations_run ON tool_invocations (run_id)''',
-    r'''CREATE TABLE pull_requests (
+)""",
+    r"""CREATE INDEX ix_tool_invocations_org ON tool_invocations (organization_id)""",
+    r"""CREATE INDEX ix_tool_invocations_run ON tool_invocations (run_id)""",
+    r"""CREATE TABLE pull_requests (
 	organization_id VARCHAR(64) NOT NULL, 
 	mission_id VARCHAR(64), 
 	task_id VARCHAR(64), 
@@ -598,9 +599,9 @@ STATEMENTS: list[str] = [
 	CONSTRAINT fk_pull_requests_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_pull_requests_mission_id_missions FOREIGN KEY(mission_id) REFERENCES missions (id) ON DELETE SET NULL, 
 	CONSTRAINT fk_pull_requests_task_id_tasks FOREIGN KEY(task_id) REFERENCES tasks (id) ON DELETE SET NULL
-)''',
-    r'''CREATE INDEX ix_pull_requests_mission ON pull_requests (mission_id)''',
-    r'''CREATE TABLE task_dependencies (
+)""",
+    r"""CREATE INDEX ix_pull_requests_mission ON pull_requests (mission_id)""",
+    r"""CREATE TABLE task_dependencies (
 	task_id VARCHAR(64) NOT NULL, 
 	depends_on_task_id VARCHAR(64) NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
@@ -608,8 +609,8 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_task_dependencies PRIMARY KEY (task_id, depends_on_task_id), 
 	CONSTRAINT fk_task_dependencies_task_id_tasks FOREIGN KEY(task_id) REFERENCES tasks (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_task_dependencies_depends_on_task_id_tasks FOREIGN KEY(depends_on_task_id) REFERENCES tasks (id) ON DELETE CASCADE
-)''',
-    r'''CREATE TABLE reviews (
+)""",
+    r"""CREATE TABLE reviews (
 	organization_id VARCHAR(64) NOT NULL, 
 	pull_request_id VARCHAR(64) NOT NULL, 
 	reviewer_agent_id VARCHAR(64), 
@@ -625,8 +626,8 @@ STATEMENTS: list[str] = [
 	CONSTRAINT pk_reviews PRIMARY KEY (id), 
 	CONSTRAINT fk_reviews_organization_id_organizations FOREIGN KEY(organization_id) REFERENCES organizations (id) ON DELETE CASCADE, 
 	CONSTRAINT fk_reviews_pull_request_id_pull_requests FOREIGN KEY(pull_request_id) REFERENCES pull_requests (id) ON DELETE CASCADE
-)''',
-    r'''CREATE INDEX ix_reviews_pull_request ON reviews (pull_request_id)''',
+)""",
+    r"""CREATE INDEX ix_reviews_pull_request ON reviews (pull_request_id)""",
 ]
 
 #: Reverse dependency order for downgrade.
