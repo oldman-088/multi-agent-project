@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import set_committed_value
 
 from app.core.errors import ConflictError, NotFoundError
 from app.core.security import new_id
@@ -160,14 +161,41 @@ async def transition(
             f"Illegal run transition {current.value} -> {new_status.value}",
             code="illegal_transition",
         )
-    run.status = new_status
+    # Claim the transition atomically: only the request that observes the run in
+    # ``current`` may move it. A read-then-write let two concurrent requests both
+    # pass the check above and emit two conflicting events (e.g. started and
+    # cancelled) for one run. The affected-row count is the arbiter.
     now = utcnow()
+    previous_status = run.status
+    values: dict = {"status": new_status, "updated_at": now}
     if new_status is RunStatus.RUNNING and run.started_at is None:
-        run.started_at = now
+        values["started_at"] = now
     if new_status in {RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.CANCELLED}:
-        run.finished_at = now
+        values["finished_at"] = now
     if error:
-        run.error = error[:600]
+        values["error"] = error[:600]
+
+    claimed = await session.scalar(
+        update(Run)
+        .where(Run.id == run.id, Run.status == previous_status)
+        .values(**values)
+        .returning(Run.id)
+        .execution_options(synchronize_session=False)
+    )
+    if claimed is None:
+        raise ConflictError(
+            "The run was changed by another request", code="illegal_transition"
+        )
+
+    # Mirror the claimed row onto the loaded instance without marking it dirty, so
+    # the response reflects the update and no second UPDATE is emitted.
+    set_committed_value(run, "status", new_status)
+    if "started_at" in values:
+        set_committed_value(run, "started_at", values["started_at"])
+    if "finished_at" in values:
+        set_committed_value(run, "finished_at", values["finished_at"])
+    if error:
+        set_committed_value(run, "error", error[:600])
 
     event_map = {
         RunStatus.RUNNING: "run.started",
@@ -248,6 +276,15 @@ async def create_checkpoint(
     resumable: bool = True,
 ) -> Checkpoint:
     run = await get_run(session, organization_id, run_id)
+    # ``(run_id, step)`` is unique: a replay of the same step must be an explicit
+    # conflict, not a raw IntegrityError/500.
+    existing = await session.scalar(
+        select(Checkpoint.id).where(Checkpoint.run_id == run.id, Checkpoint.step == step)
+    )
+    if existing is not None:
+        raise ConflictError(
+            f"Run already has a checkpoint at step {step}", code="checkpoint_exists"
+        )
     checkpoint = Checkpoint(
         id=new_id("ckp"),
         organization_id=organization_id,

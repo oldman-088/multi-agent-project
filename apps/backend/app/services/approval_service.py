@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import set_committed_value
 
 from app.core.errors import ConflictError, NotFoundError
 from app.db.base import utcnow
@@ -83,16 +84,41 @@ async def decide(
     approve: bool,
     note: str = "",
 ) -> Approval:
-    """A human decides. An AI actor can never approve: ``actor_type`` is a user."""
+    """A human decides. An AI actor can never approve: ``actor_type`` is a user.
+
+    The pending check and the write happen in one atomic ``UPDATE ... WHERE
+    status = 'pending'``. A read-then-write let two concurrent decisions both see
+    ``pending`` and both succeed, writing an approved *and* a rejected event for
+    the same approval; an approval is now decided exactly once.
+    """
     approval = await session.get(Approval, approval_id)
     if approval is None or approval.organization_id != organization_id:
         raise NotFoundError("Approval not found")
     if ApprovalStatus(approval.status) is not ApprovalStatus.PENDING:
         raise ConflictError(f"Approval is already '{approval.status}'", code="approval_not_pending")
-    approval.status = ApprovalStatus.APPROVED if approve else ApprovalStatus.REJECTED
-    approval.decided_by = actor_id
-    approval.decided_at = utcnow()
-    approval.decision_note = note[:600]
+
+    target = ApprovalStatus.APPROVED if approve else ApprovalStatus.REJECTED
+    decided_at = utcnow()
+    claimed = await session.scalar(
+        update(Approval)
+        .where(Approval.id == approval.id, Approval.status == ApprovalStatus.PENDING)
+        .values(
+            status=target,
+            decided_by=actor_id,
+            decided_at=decided_at,
+            decision_note=note[:600],
+        )
+        .returning(Approval.id)
+        .execution_options(synchronize_session=False)
+    )
+    if claimed is None:
+        # Another request decided it between the check and the update.
+        raise ConflictError("Approval was decided by another request", code="approval_not_pending")
+    # Mirror the claimed row onto the loaded instance (see run_service.transition).
+    set_committed_value(approval, "status", target)
+    set_committed_value(approval, "decided_by", actor_id)
+    set_committed_value(approval, "decided_at", decided_at)
+    set_committed_value(approval, "decision_note", note[:600])
     await event_service.append_event(
         session,
         organization_id=organization_id,

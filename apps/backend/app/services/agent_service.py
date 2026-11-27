@@ -10,6 +10,7 @@ import re
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ConflictError, NotFoundError, ValidationFailedError
@@ -18,6 +19,9 @@ from app.models.agents import Agent, AgentVersion, Conversation, Message
 from app.models.enums import MessageRole
 from app.schemas.agents import AgentCreate, AgentUpdate
 from app.services import audit
+
+#: Attempts to obtain a free message sequence under concurrent sends.
+_MESSAGE_SEQUENCE_ATTEMPTS = 5
 
 #: Applied when a caller supplies no explicit limits.
 DEFAULT_LIMITS: dict[str, int] = {"max_steps": 40, "timeout_seconds": 900, "max_tool_calls": 40}
@@ -380,9 +384,29 @@ async def append_message(
         tool_calls=tool_calls or [],
         sequence=int(next_sequence),
     )
-    session.add(message)
+    # ``(conversation_id, sequence)`` is unique. Two concurrent sends can read the
+    # same maximum, so the loser retries under a SAVEPOINT and takes the next free
+    # number instead of returning an opaque 500.
+    for attempt in range(_MESSAGE_SEQUENCE_ATTEMPTS):
+        try:
+            async with session.begin_nested():
+                session.add(message)
+                await session.flush()
+            break
+        except IntegrityError:
+            if message in session:  # a savepoint rollback may already detach it
+                session.expunge(message)
+            if attempt == _MESSAGE_SEQUENCE_ATTEMPTS - 1:
+                raise
+            message.sequence = (
+                await session.scalar(
+                    select(func.coalesce(func.max(Message.sequence), 0)).where(
+                        Message.conversation_id == conversation.id
+                    )
+                )
+                or 0
+            ) + 1
     conversation.last_message_at = utcnow()
-    await session.flush()
     return message
 
 

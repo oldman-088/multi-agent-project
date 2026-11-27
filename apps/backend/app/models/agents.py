@@ -118,7 +118,12 @@ class Message(Base, PublicIdMixin, TimestampMixin):
     """A single chat message. ``usage`` stays null unless the connection reports it."""
 
     __tablename__ = "messages"
-    __table_args__ = (Index("ix_messages_conversation", "conversation_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_messages_conversation", "conversation_id", "created_at"),
+        # The database arbitrates ordering: two concurrent sends can never share a
+        # sequence, so the client's message order is always unambiguous.
+        UniqueConstraint("conversation_id", "sequence", name="uq_messages_conversation_sequence"),
+    )
     id_prefix = "msg"
 
     organization_id: Mapped[str] = mapped_column(

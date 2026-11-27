@@ -12,6 +12,7 @@ from typing import Any
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
@@ -123,3 +124,18 @@ def register_error_handlers(app: FastAPI) -> None:
             status.HTTP_409_CONFLICT: "conflict",
         }.get(exc.status_code, "http_error")
         return _error_response(exc.status_code, code, str(exc.detail))
+
+    @app.exception_handler(IntegrityError)
+    async def _integrity_error(_: Request, exc: IntegrityError) -> JSONResponse:
+        """Last-resort mapping for a database constraint.
+
+        Domain code is expected to pre-check, but a race or a forgotten pre-check
+        must degrade to a 409 in the documented envelope, never an opaque 500.
+        The driver message is not echoed: it can carry row values.
+        """
+        return _error_response(
+            status.HTTP_409_CONFLICT,
+            "conflict",
+            "The request conflicts with existing data",
+            {"constraint": str(getattr(exc.orig, "sqlite_errorname", "") or "")[:80]},
+        )

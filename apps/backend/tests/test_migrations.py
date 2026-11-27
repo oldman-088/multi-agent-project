@@ -32,11 +32,28 @@ def _run_alembic(url: str, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_single_migration_revision_exists() -> None:
-    versions = sorted((BACKEND_DIR / "alembic" / "versions").glob("*.py"))
-    assert [path.name for path in versions] == ["0001_initial_schema.py"], (
-        "there must be exactly one head revision owned by the backend task"
-    )
+def test_migration_history_is_a_single_linear_head() -> None:
+    """One head, one base and no branch points: ``upgrade head`` is unambiguous."""
+    import importlib.util
+
+    version_dir = BACKEND_DIR / "alembic" / "versions"
+    revisions: dict[str, str | None] = {}
+    for path in sorted(version_dir.glob("*.py")):
+        spec = importlib.util.spec_from_file_location(f"_migration_{path.stem}", path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        revisions[module.revision] = module.down_revision
+
+    parents = {down for down in revisions.values() if down is not None}
+    heads = sorted(set(revisions) - parents)
+    bases = sorted(rev for rev, down in revisions.items() if down is None)
+    assert len(heads) == 1, f"expected a single head revision, found {heads}"
+    assert bases == ["0001_initial"], f"expected one base revision, found {bases}"
+    # Every revision except the base must have exactly one child: no branches.
+    for revision in revisions:
+        children = [rev for rev, down in revisions.items() if down == revision]
+        assert len(children) <= 1, f"revision {revision} is a branch point: {children}"
 
 
 def test_migration_round_trips_on_empty_sqlite(tmp_path: Path) -> None:
