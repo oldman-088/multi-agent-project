@@ -1,0 +1,145 @@
+/**
+ * Design tokens (SPEC §8.1).
+ *
+ * Components may only use these tokens — never a hard-coded palette class or a
+ * raw hex value. `--nx-*` variables are defined for the dark and light themes
+ * and switched by `[data-theme]` on `<html>`.
+ *
+ * Layout rules (SPEC §8.2): logical properties only. This stylesheet uses
+ * `margin-inline-start`, `padding-inline`, `inset-inline-start`,
+ * `border-start-start-radius`, `text-align: start`; physical `left`/`right`/
+ * `margin-left` never appear, so Arabic, Persian and English share one layout.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --nx-font-ui: 'IBM Plex Sans Arabic', 'DejaVu Sans', system-ui, sans-serif;
+  --nx-font-mono: 'DejaVu Sans Mono', ui-monospace, monospace;
+
+  --nx-color-bg: #0b1020;
+  --nx-color-bg-elevated: #121a30;
+  --nx-color-bg-subtle: #17203a;
+  --nx-color-border: #26324f;
+  --nx-color-border-strong: #3a4a72;
+  --nx-color-text: #e8eefc;
+  --nx-color-text-muted: #a9b6d3;
+  --nx-color-text-faint: #7f8dad;
+  --nx-color-accent: #7aa2ff;
+  --nx-color-accent-contrast: #08101f;
+  --nx-color-success: #4ade94;
+  --nx-color-warning: #f5c451;
+  --nx-color-danger: #ff8080;
+  --nx-color-focus: #ffd166;
+
+  --nx-radius-sm: 6px;
+  --nx-radius-md: 10px;
+  --nx-radius-lg: 16px;
+
+  --nx-space-1: 4px;
+  --nx-space-2: 8px;
+  --nx-space-3: 12px;
+  --nx-space-4: 16px;
+  --nx-space-5: 24px;
+  --nx-space-6: 32px;
+
+  --nx-shadow-1: 0 1px 2px rgb(0 0 0 / 45%);
+  --nx-shadow-2: 0 10px 30px rgb(0 0 0 / 40%);
+
+  --nx-z-header: 10;
+  --nx-z-skip-link: 100;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --nx-color-bg: #f6f8fd;
+  --nx-color-bg-elevated: #ffffff;
+  --nx-color-bg-subtle: #eef2fb;
+  --nx-color-border: #d3dcf0;
+  --nx-color-border-strong: #aebade;
+  --nx-color-text: #131a2b;
+  --nx-color-text-muted: #46536f;
+  --nx-color-text-faint: #5d6b8a;
+  --nx-color-accent: #1f4fd8;
+  --nx-color-accent-contrast: #ffffff;
+  --nx-color-success: #0f7a4a;
+  --nx-color-warning: #8a5a00;
+  --nx-color-danger: #b3261e;
+  --nx-color-focus: #a35f00;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-block-size: 100%;
+}
+
+body {
+  background: var(--nx-color-bg);
+  color: var(--nx-color-text);
+  font-family: var(--nx-font-ui);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* WCAG AA contrast and a visible focus ring for every interactive element. */
+:where(a, button, select, input, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--nx-color-focus);
+  outline-offset: 2px;
+  border-radius: var(--nx-radius-sm);
+}
+
+h1,
+h2,
+h3 {
+  margin-block: 0 var(--nx-space-2);
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: 1.75rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+}
+
+p {
+  margin-block: 0 var(--nx-space-3);
+  color: var(--nx-color-text-muted);
+}
+
+ul,
+ol {
+  margin-block: 0 var(--nx-space-3);
+  padding-inline-start: var(--nx-space-5);
+}
+
+code,
+pre,
+.nx-ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: var(--nx-font-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
