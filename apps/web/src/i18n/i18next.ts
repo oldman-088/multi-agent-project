@@ -19,7 +19,14 @@ export interface CreateI18nOptions {
   readonly language?: Language;
   /** Persist the owner's choice to `localStorage`; defaults to true in a browser. */
   readonly persist?: boolean;
-  /** Throw on a missing key instead of returning the key; defaults to `import.meta.env.DEV`. */
+  /**
+   * Throw on a missing key instead of returning the key name.
+   *
+   * Defaults to `true` in a development build and `false` in a production build
+   * (`import.meta.env.DEV`). In production a missing key is logged as an error
+   * and the key name is rendered, which the `TranslationErrorBoundary` degrades
+   * further if a render does throw — the UI must never go blank over a string.
+   */
   readonly throwOnMissingKey?: boolean;
   /** Storage implementation (injected by tests). */
   readonly storage?: Pick<Storage, 'getItem' | 'setItem'> | undefined;
@@ -44,6 +51,19 @@ function writeStoredLanguage(storage: Pick<Storage, 'setItem'> | undefined, lang
   }
 }
 
+/**
+ * True in a Vite development build (and under Vitest, which also sets
+ * `import.meta.env.DEV`); false in a production bundle and in plain Node.
+ * Exported so the missing-key policy can be asserted instead of assumed.
+ */
+export function isDevelopmentBuild(): boolean {
+  try {
+    return Boolean((import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV);
+  } catch {
+    return false;
+  }
+}
+
 /** Create an isolated i18next instance (tests create one per case). */
 export function createI18n(options: CreateI18nOptions = {}): I18nInstance {
   const browserStorage =
@@ -51,7 +71,7 @@ export function createI18n(options: CreateI18nOptions = {}): I18nInstance {
 
   const initialLanguage = options.language ?? readStoredLanguage(browserStorage) ?? DEFAULT_LANGUAGE;
   const persist = options.persist ?? true;
-  const throwOnMissingKey = options.throwOnMissingKey ?? true;
+  const throwOnMissingKey = options.throwOnMissingKey ?? isDevelopmentBuild();
 
   const instance = i18next.createInstance();
 
@@ -77,8 +97,15 @@ export function createI18n(options: CreateI18nOptions = {}): I18nInstance {
     // i18next only invokes `missingKeyHandler` when saveMissing is on (we do not
     // have a backend to save to; the handler reports the gap and throws in dev).
     saveMissing: true,
+    // `'fallback'` (the i18next default) reports only the fallback locale, which
+    // made the message name `ar` even when `fa` or `en` was active. `'all'`
+    // reports every locale the lookup searched, so the message names the
+    // language that is actually missing the key.
+    saveMissingTo: 'all',
     missingKeyHandler: (lngs, ns, key) => {
-      const message = `[i18n] missing translation key "${key}" (namespace "${ns}") for ${lngs.join(', ')}`;
+      const searched = lngs.join(', ');
+      const active = typeof instance.language === 'string' ? instance.language : searched;
+      const message = `[i18n] missing translation key "${key}" (namespace "${ns}") for ${searched} — active language "${active}"`;
       if (throwOnMissingKey) throw new Error(message);
       // eslint-disable-next-line no-console -- loud in production, silent in tests
       console.error(message);
@@ -100,7 +127,13 @@ export function createI18n(options: CreateI18nOptions = {}): I18nInstance {
   return instance;
 }
 
-/** The app-wide instance. Import this in components through `I18nProvider`. */
-export const i18n = createI18n({ throwOnMissingKey: true });
+/**
+ * The app-wide instance. Import this in components through `I18nProvider`.
+ *
+ * The missing-key policy follows the build: throw in development so a gap is
+ * impossible to miss, log in production so a user never sees a blank screen.
+ * `TranslationErrorBoundary` is the last line of defence.
+ */
+export const i18n = createI18n();
 
 export type { I18nInstance };

@@ -5,20 +5,21 @@
   "description": "NEXUS AGENT OS — web frontend workspace, i18n coverage checks and accessibility (axe) test suite",
   "type": "module",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=22.18.0"
   },
   "workspaces": [
     "apps/web"
   ],
   "scripts": {
     "build": "npm run build --workspace apps/web",
-    "typecheck": "npm run typecheck --workspace apps/web && tsc --noEmit -p apps/web/tsconfig.node.json",
+    "typecheck": "npm run typecheck --workspace apps/web && tsc --noEmit -p apps/web/tsconfig.node.json && tsc --noEmit -p tests/a11y/tsconfig.json",
     "lint": "npm run lint --workspace apps/web",
     "i18n:check": "npm run i18n:check --workspace apps/web",
     "test:unit": "npm run test --workspace apps/web",
     "test:a11y": "playwright test --config tests/a11y/playwright.a11y.config.ts",
     "screenshots": "playwright test --config tests/a11y/playwright.a11y.config.ts --project=screenshots",
-    "check": "npm run lint && npm run typecheck && npm run i18n:check && npm run test:unit && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run i18n:check && npm run test:unit && npm run build",
+    "a11y:dist": "npm run build --workspace apps/web && NEXUS_PREVIEW=1 playwright test --config tests/a11y/playwright.a11y.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.1",

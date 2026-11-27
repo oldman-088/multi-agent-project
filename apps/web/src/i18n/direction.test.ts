@@ -2,14 +2,14 @@
  * `<html lang/dir>` must be derived from the active language (SPEC §8.2) —
  * never hard-coded — and must follow a runtime language change.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   applyDocumentLanguage,
   documentLanguageAttributes,
   syncDocumentLanguage,
 } from './direction.ts';
-import { createI18n } from './i18next.ts';
+import { createI18n, isDevelopmentBuild } from './i18next.ts';
 import { LANGUAGE_STORAGE_KEY, type Language } from './languages.ts';
 
 describe('documentLanguageAttributes', () => {
@@ -144,5 +144,51 @@ describe('createI18n', () => {
   it('reports instead of throwing when throwOnMissingKey is off (production build)', () => {
     instance = createI18n({ language: 'en', persist: false, throwOnMissingKey: false });
     expect(instance.t('does.not.exist')).toBe('does.not.exist');
+  });
+
+  it('derives the default missing-key policy from the build (dev throws, prod logs)', () => {
+    const dev = isDevelopmentBuild();
+    // Guard against the regression the reviewer reported: a hard-coded `true`
+    // made a production build throw inside render with no boundary, i.e. a
+    // blank screen. The default must track the build, never a constant.
+    expect(dev).toBe(Boolean(import.meta.env?.DEV));
+
+    const logged: string[] = [];
+    const spy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      logged.push(String(args[0]));
+    });
+    try {
+      instance = createI18n({ language: 'fa', persist: false, throwOnMissingKey: !dev });
+      // `!dev` is the production policy: log and render the key, never throw.
+      expect(() => instance?.t('does.not.exist')).not.toThrow();
+      expect(instance.t('does.not.exist')).toBe('does.not.exist');
+    } finally {
+      spy.mockRestore();
+    }
+    expect(logged.some((line) => line.includes('missing translation key'))).toBe(true);
+
+    // …and in a dev build the default throws, so a gap cannot be missed.
+    instance.off('languageChanged');
+    instance = createI18n({ language: 'fa', persist: false, throwOnMissingKey: dev });
+    if (dev) expect(() => instance?.t('does.not.exist')).toThrow(/missing translation key/);
+    else expect(() => instance?.t('does.not.exist')).not.toThrow();
+  });
+
+  it.each([['fa'], ['en']])('names the language that is actually missing the key in %s', (language) => {
+    const messages: string[] = [];
+    const spy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      messages.push(String(args[0]));
+    });
+    try {
+      instance = createI18n({ language: language as 'fa' | 'en', persist: false, throwOnMissingKey: false });
+      instance.t('absent.key');
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(messages).toHaveLength(1);
+    // Regression: `saveMissingTo: 'fallback'` always reported "ar".
+    expect(messages[0]).toContain(`active language "${language}"`);
+    expect(messages[0]).toContain(`${language}, ar`);
   });
 });

@@ -22,6 +22,8 @@ export interface AppRootProps {
 export function AppRoot({ initialPath = '/', instance = appI18n }: AppRootProps) {
   return (
     <I18nProvider instance={instance}>
+      {/* Each page is wrapped in `TranslationErrorBoundary` inside `App.tsx`,
+          so a page-level failure degrades without taking the shell with it. */}
       <MemoryRouter initialEntries={[initialPath]}>
         <App />
       </MemoryRouter>

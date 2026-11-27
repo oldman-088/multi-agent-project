@@ -11,15 +11,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { MAIN_CONTENT_ID, SkipLink } from './SkipLink.tsx';
 import { LanguageSwitcher } from './LanguageSwitcher.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
-
-/** Primary destinations. Order is language-independent. */
-const NAV_ITEMS = [
-  { to: '/', key: 'nav.dashboard', end: true },
-  { to: '/connections', key: 'nav.connections', end: false },
-  { to: '/agents', key: 'nav.agents', end: false },
-  { to: '/runs', key: 'nav.runs', end: false },
-  { to: '/settings', key: 'nav.settings', end: false },
-] as const;
+import { NAV_ROUTES } from '../routes.ts';
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -46,10 +38,10 @@ export function AppShell() {
 
       <nav className="nx-nav" aria-label={t('nav.label')}>
         <ul className="nx-nav__list">
-          {NAV_ITEMS.map((item) => (
+          {NAV_ROUTES.map((item) => (
             <li key={item.to}>
               <NavLink className="nx-nav__link" to={item.to} end={item.end}>
-                {t(item.key)}
+                {t(item.labelKey)}
               </NavLink>
             </li>
           ))}

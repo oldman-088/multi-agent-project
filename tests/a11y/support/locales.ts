@@ -7,6 +7,10 @@
  */
 import { expect, type Page } from '@playwright/test';
 
+// The route matrix is the app's own table, so a new page cannot be skipped by
+// the a11y/screenshot suites (see apps/web/src/routes.ts and routes.test.ts).
+import { MAIN_ROUTES } from '../../../apps/web/src/routes.ts';
+
 /** Languages shipped by the product, with the direction they must render in. */
 export const LOCALES = [
   { language: 'ar', dir: 'rtl', nativeName: 'العربية' },
@@ -18,14 +22,16 @@ export type Locale = (typeof LOCALES)[number];
 export type Language = Locale['language'];
 export type ExpectedDirection = Locale['dir'];
 
-/** Main pages, with the translation key of their `<h1>`. */
-export const MAIN_PAGES = [
-  { path: '/', name: 'dashboard', titleKey: 'page.dashboard.title' },
-  { path: '/connections', name: 'connections', titleKey: 'connection.title' },
-  { path: '/agents', name: 'agents', titleKey: 'page.agents.title' },
-  { path: '/runs', name: 'runs', titleKey: 'page.runs.title' },
-  { path: '/settings', name: 'settings', titleKey: 'page.settings.title' },
-] as const;
+/**
+ * Main pages, derived from the app's route table — never hand-written here.
+ * Adding a route in `apps/web/src/routes.ts` automatically adds it to the axe
+ * and screenshot matrices.
+ */
+export const MAIN_PAGES = MAIN_ROUTES.map((route) => ({
+  path: route.path,
+  name: route.name,
+  titleKey: route.titleKey,
+}));
 
 /** The default (Arabic) and the LTR (English) locales used by the screenshot matrix. */
 export const SCREENSHOT_LOCALES = ['ar', 'en'] as const;
