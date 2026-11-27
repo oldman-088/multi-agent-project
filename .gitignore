@@ -1,1 +1,15 @@
 node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.db
+*.sqlite3
+nexus.db*
+test-results/
+playwright-report/
+nexus.db*
+*.egg-info/
+
