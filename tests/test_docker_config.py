@@ -68,6 +68,21 @@ def test_bridge_is_not_published_to_host() -> None:
     assert "ports" not in bridge or not bridge.get("ports")
 
 
+def test_bridge_image_defaults_to_loopback_bind() -> None:
+    """SPEC §3.2: the bridge must default to binding 127.0.0.1 only.
+
+    The image default must be the secure loopback address; Docker Compose may
+    override it for internal-container networking, but the image default must not
+    already be 0.0.0.0.
+    """
+    dockerfile = (DOCKER_DIR / "Dockerfile.bridge").read_text(encoding="utf-8")
+    assert "BRIDGE_HOST=127.0.0.1" in dockerfile
+    assert "BRIDGE_HOST=0.0.0.0" not in dockerfile
+    # Compose overrides the image default for the internal network only.
+    compose = _compose()
+    assert compose["services"]["bridge"]["environment"]["BRIDGE_HOST"] == "0.0.0.0"
+
+
 def test_env_example_documents_required_variables() -> None:
     text = ENV_EXAMPLE_PATH.read_text(encoding="utf-8")
     for key in (
