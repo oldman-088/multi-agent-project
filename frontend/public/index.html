@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NEXUS AGENT OS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>NEXUS AGENT OS</h1>
+      <p class="subtitle">Local stack deployment</p>
+
+      <section class="card" id="status-card" aria-live="polite">
+        <h2>Backend status</h2>
+        <p id="backend-status" class="status" data-state="loading">Checking…</p>
+        <pre id="backend-payload" class="payload" hidden></pre>
+      </section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
