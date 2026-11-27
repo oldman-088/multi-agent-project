@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+/* Wire the --nx-* tokens into Tailwind's theme so components can use
+   token-based utilities (bg-nx-surface, rounded-nx-md, z-nx-modal, …)
+   instead of hard-coded palette classes (Section 8.1). */
+@theme inline {
+  --color-nx-bg: var(--nx-color-bg);
+  --color-nx-surface: var(--nx-color-surface);
+  --color-nx-surface-raised: var(--nx-color-surface-raised);
+  --color-nx-border: var(--nx-color-border);
+  --color-nx-fg: var(--nx-color-fg);
+  --color-nx-fg-muted: var(--nx-color-fg-muted);
+  --color-nx-primary: var(--nx-color-primary);
+  --color-nx-primary-fg: var(--nx-color-primary-fg);
+  --color-nx-accent: var(--nx-color-accent);
+  --color-nx-overlay: var(--nx-color-overlay);
+  --color-nx-danger: var(--nx-color-danger);
+  --color-nx-focus: var(--nx-color-focus);
+
+  --radius-nx-sm: var(--nx-radius-sm);
+  --radius-nx-md: var(--nx-radius-md);
+  --radius-nx-lg: var(--nx-radius-lg);
+  --radius-nx-full: var(--nx-radius-full);
+
+  --shadow-nx-sm: var(--nx-shadow-sm);
+  --shadow-nx-md: var(--nx-shadow-md);
+  --shadow-nx-lg: var(--nx-shadow-lg);
+
+  --z-index-nx-sticky: var(--nx-z-sticky);
+  --z-index-nx-dropdown: var(--nx-z-dropdown);
+  --z-index-nx-modal: var(--nx-z-modal);
+  --z-index-nx-toast: var(--nx-z-toast);
+
+  --font-sans: var(--nx-font-sans);
+  --font-mono: var(--nx-font-mono);
+
+  /* Numeric spacing utilities (p-4, gap-2, …) derive from the nx spacing token. */
+  --spacing: var(--nx-space-1);
+}
+
+@layer base {
+  html {
+    font-family: var(--nx-font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--nx-color-bg);
+    color: var(--nx-color-fg);
+    min-height: 100vh;
+  }
+
+  /* Visible focus rings everywhere (Section 8.2 accessibility). */
+  :focus-visible {
+    outline: 2px solid var(--nx-color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Motion is purposeful and short; honor prefers-reduced-motion (Section 8.1). */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Animations pause while the tab is hidden (Section 8.1). */
+.nx-animations-paused *,
+.nx-animations-paused *::before,
+.nx-animations-paused *::after {
+  animation-play-state: paused !important;
+}
