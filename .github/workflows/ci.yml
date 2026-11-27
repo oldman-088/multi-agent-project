@@ -84,7 +84,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
       - name: Install dependencies
         if: ${{ hashFiles('tsconfig.json') != '' }}
         run: npm ci
@@ -103,7 +102,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
       - name: Install backend dependencies
         if: ${{ hashFiles('scripts/check.sh') != '' }}
         run: |
@@ -140,11 +138,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Detect which slices are present
         id: detect
