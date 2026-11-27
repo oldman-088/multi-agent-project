@@ -1,1 +1,8 @@
 node_modules/
+*.sqlite3
+*.db
+
+__pycache__/
+*.py[cod]
+apps/backend/.venv/
+apps/backend/*.egg-info/
