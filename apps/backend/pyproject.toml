@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-workflows"
+version = "0.1.0"
+description = "NEXUS AGENT OS — orchestration slice: workflow task DAG engine, atomic task claims, bounded scheduling (Worker 4)."
+requires-python = ">=3.11"
+dependencies = [
+  "sqlalchemy>=2.0,<3",
+  "alembic>=1.13,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "mypy>=1.10",
+  "ruff>=0.5",
+]
+postgres = [
+  "psycopg[binary]>=3.1",
+]
+
+[tool.setuptools]
+packages = ["app", "app.workflows"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["app", "tests", "migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "C4"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+# Alembic boilerplate and revision scripts are machine-shaped; the migration
+# gate (upgrade/downgrade round-trip on SQLite and PostgreSQL) is their test.
+"migrations/env.py" = ["E402"]
+"migrations/versions/*" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["app/workflows"]
+warn_unused_configs = true
