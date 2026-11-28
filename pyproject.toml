@@ -1,0 +1,47 @@
+# Project metadata and quality-gate configuration for NEXUS AGENT OS.
+#
+# Root packaging exists so the CI `check` job can run `pip install -e ".[test]"`
+# and then `bash scripts/check.sh` (docs/SPEC.md §9) against whatever Python
+# slices are present. The first Python slice is the shared task manifest
+# (`orchestrator/`), whose data schema is the contract `docs/ORCHESTRATION.md`.
+#
+# Backend/bridge slices keep their own dependency stacks (their own
+# pyproject.toml/requirements); this file carries only the root project and the
+# test extra used by the root quality gate.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-agent-os"
+version = "0.1.0"
+description = "NEXUS AGENT OS — orchestration task manifest and shared contracts"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "mypy>=1.8",
+]
+
+[tool.setuptools]
+packages = ["orchestrator"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/orchestrator"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["orchestrator"]
+
+[tool.mypy]
+strict = true
+files = ["orchestrator"]

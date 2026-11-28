@@ -152,7 +152,12 @@ jobs:
             node -e "const p=require('./package.json');process.exit(p.scripts&&(p.scripts['start:frontend']||p.scripts.dev)?0:1)" 2>/dev/null; then
             frontend=true
           fi
-          if [[ -f scripts/check.sh ]]; then
+          # The backend slice is `backend/app/main.py` — the exact file the
+          # "Start the local stack" step below starts uvicorn from. The check
+          # script (`scripts/check.sh`) is a separate slice-presence signal and
+          # is guarded on its own hashFiles condition in the `check` job; a
+          # slice can ship scripts/check.sh without the backend app.
+          if [[ -f backend/app/main.py ]]; then
             backend=true
           fi
           echo "frontend_present=${frontend}" >> "$GITHUB_OUTPUT"
