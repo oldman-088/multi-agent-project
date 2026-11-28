@@ -1,4 +1,11 @@
 {
+  "name": "aatm-project",
+  "private": true,
+  "workspaces": ["frontend"],
+  "scripts": {
+    "build:frontend": "npm run build --workspace aatm-frontend",
+    "test:frontend": "npm test --workspace aatm-frontend"
+  },
   "devDependencies": {
     "@playwright/test": "^1.65.1",
     "playwright": "^1.65.1"
